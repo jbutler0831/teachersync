@@ -1,4 +1,5 @@
-// Draws the app icons (public/icons/*.png) from the same shapes as favicon.svg, with no image tools needed.
+// Draws the app icons (public/icons/*.png, and desktop/icon.png for the Mac app) from the same shapes as
+// favicon.svg, with no image tools needed.
 // Run with `npm run icons` after changing the mark.
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
@@ -21,7 +22,7 @@ function inRoundRect(x, y, size, r) {
 }
 
 // rounded: transparent corners (radius 8/32). glyphScale: shrink the mark for maskable icons' safe zone.
-function draw(size, { rounded, glyphScale = 1 }) {
+function pixels(size, { rounded, glyphScale = 1 }) {
   const px = new Uint8Array(size * size * 4), SS = 4, unit = 32 / size;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
@@ -44,7 +45,15 @@ function draw(size, { rounded, glyphScale = 1 }) {
       px[o + 3] = a / n;
     }
   }
-  return png(size, px);
+  return px;
+}
+const draw = (size, opts) => png(size, pixels(size, opts));
+
+// A Mac app icon: the rounded square at Apple's grid size (824 of 1024), centered, with transparent margins.
+function macIcon(canvas = 1024, inner = 824) {
+  const px = new Uint8Array(canvas * canvas * 4), icon = pixels(inner, { rounded: true }), off = (canvas - inner) / 2;
+  for (let y = 0; y < inner; y++) px.set(icon.subarray(y * inner * 4, (y + 1) * inner * 4), ((y + off) * canvas + off) * 4);
+  return png(canvas, px);
 }
 
 const CRC = new Int32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c; });
@@ -76,3 +85,9 @@ const icons = {
 };
 for (const [name, data] of Object.entries(icons)) writeFileSync(new URL(name, out), data);
 console.log(`Wrote ${Object.keys(icons).join(', ')} to public/icons/`);
+
+// electron-builder turns this into the Mac .icns.
+const desktop = new URL('../desktop/', import.meta.url);
+mkdirSync(desktop, { recursive: true });
+writeFileSync(new URL('icon.png', desktop), macIcon());
+console.log('Wrote desktop/icon.png');

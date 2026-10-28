@@ -29,3 +29,6 @@ Thumbs.db
 # Backups and exports made while testing the app (they can hold real planning data)
 TeacherSync-backup-*.json
 TeacherSync-damaged-data-*.json
+
+# Desktop app builds (npm run dist:mac)
+release/
