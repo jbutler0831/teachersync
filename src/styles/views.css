@@ -1,0 +1,119 @@
+/* Section pages: Classes & schedule, Today's classes, and the form sheets. Colors come from tokens.css only,
+   so light and dark both work. A class's color is passed in as --c (one of --s1 … --s8). */
+
+.count { font: 500 12px/1 var(--f-mono); color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; }
+.head-btn { margin-left: auto; }
+.head-link { margin-left: auto; font-size: 13px; font-weight: 600; }
+.badge { display: inline-block; vertical-align: 1px; font: 600 10.5px/1 var(--f-mono); letter-spacing: .04em; text-transform: uppercase; color: var(--hl-ink); background: var(--hl); border-radius: 4px; padding: 3px 5px; }
+.note.small { font-size: 13px; }
+
+/* Class list */
+.class-list { list-style: none; margin: 0; padding: 0; }
+.class-item { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 20px; padding: 16px 18px; border-top: 1px solid var(--line); border-left: 4px solid var(--c, var(--line)); }
+.class-item:first-child { border-top: 0; }
+.class-main { display: grid; gap: 6px; min-width: 0; flex: 1 1 280px; }
+.class-main h3 { display: flex; align-items: center; gap: 8px; margin: 0; font: 700 17px/1.25 var(--f-display); overflow-wrap: anywhere; }
+.dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.class-meta { margin: 0; color: var(--muted); font-size: 14px; }
+.meet-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 14px; }
+.meet-list b { font-weight: 600; }
+.meet-list .mono { color: var(--muted); font-size: 13px; }
+.class-notes { margin: 0; color: var(--muted); font-size: 13px; white-space: pre-line; overflow-wrap: anywhere; border-left: 2px solid var(--line); padding-left: 10px; }
+.clash { margin: 0; justify-self: start; font-size: 13px; font-weight: 600; color: var(--warn); background: var(--warn-soft); border-radius: 6px; padding: 3px 8px; }
+
+/* Week */
+.week-nav { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.week-nav .icon-btn { font-size: 20px; line-height: 1; }
+.week-label { font-size: 13px; color: var(--muted); min-width: 9.5em; text-align: center; }
+.week-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.week-grid > .day { padding: 12px 14px 16px; border-right: 1px solid var(--line); min-width: 0; }
+.week-grid > .day:last-child { border-right: 0; }
+.day h3 { margin: 0 0 10px; font: 600 12.5px/1.2 var(--f-mono); color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.day.is-today h3 { color: var(--ink); }
+.day.is-today { background: color-mix(in srgb, var(--accent-soft) 45%, transparent); }
+.day ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.day li { display: grid; gap: 1px; padding: 6px 8px; border-radius: 6px; background: color-mix(in srgb, var(--c) 12%, var(--surface)); border-left: 3px solid var(--c); font-size: 13px; min-width: 0; }
+.day li b { font-weight: 600; overflow-wrap: anywhere; }
+.day li .mono { font-size: 12px; color: var(--muted); }
+.room { color: var(--muted); font-size: 12px; }
+.day .none { margin: 0; color: var(--faint); font-size: 13px; }
+.day .off-note { margin: 0; font-size: 13px; font-weight: 600; color: var(--warn); background: var(--warn-soft); border-radius: 6px; padding: 6px 8px; }
+.day.is-off { background: repeating-linear-gradient(-45deg, transparent 0 8px, color-mix(in srgb, var(--line) 35%, transparent) 8px 9px); }
+
+/* Days off */
+.off-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.off-list > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.off-list > li:first-child { padding-top: 0; }
+.off-list > li:last-child { border-bottom: 0; padding-bottom: 0; }
+.off-list b { font-size: 15px; overflow-wrap: anywhere; }
+.off-meta { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.past { margin-top: 14px; }
+.past summary { cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 600; padding: 4px 0; }
+.past .off-list { margin-top: 10px; }
+
+/* Today */
+.today-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.today-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 10px 12px; border-radius: 8px; border-left: 4px solid var(--c); background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
+.today-list .mono { font-size: 13px; color: var(--muted); min-width: 10.5em; }
+
+/* Form sheets */
+dialog.form-sheet { width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: auto; overscroll-behavior: contain; }
+.form-body { gap: 16px; color: var(--ink); }
+.field { display: grid; gap: 6px; min-width: 0; border: 0; padding: 0; margin: 0; }
+.field > span, .field > legend { font-weight: 600; font-size: 13.5px; padding: 0; margin-bottom: 0; }
+.field i { font-style: normal; font-weight: 400; color: var(--faint); }
+.field .field-in { width: 100%; }
+.field .field-error { margin: 0; }
+.field-in[aria-invalid="true"] { border-color: var(--crit); }
+textarea.field-in { resize: vertical; min-height: 4.5em; line-height: 1.45; }
+.field-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+.hint { margin: 0; color: var(--muted); font-size: 13px; }
+.form-error { margin: 0; }
+
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch { position: relative; cursor: pointer; }
+.swatch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.swatch span { display: block; width: 30px; height: 30px; border-radius: 50%; background: var(--c); border: 3px solid var(--surface); box-shadow: 0 0 0 1px var(--line); }
+.swatch input:checked + span { box-shadow: 0 0 0 2px var(--ink); }
+.swatch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.meet-rows { display: grid; gap: 10px; }
+.meet-row { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.day-picks { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.day-pick { position: relative; }
+.day-pick input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.day-pick span { display: block; text-align: center; padding: 7px 6px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--muted); }
+.day-pick input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.day-pick input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.times { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.times label { min-width: 0; }
+.times .field-in { width: 100%; min-width: 0; font-family: var(--f-mono); padding-inline: 8px; }
+.times .icon-btn { font-size: 18px; }
+.meet-row .field-error { margin: 0; }
+.clash-box { border-radius: 8px; padding: 10px 12px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); font-size: 13.5px; display: grid; gap: 6px; }
+.clash-box ul { margin: 0; padding-left: 18px; }
+
+@media (max-width: 899px) {
+  .week-grid { grid-template-columns: minmax(0, 1fr); }
+  .week-grid > .day { border-right: 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 10px; align-items: start; }
+  .week-grid > .day:last-child { border-bottom: 0; }
+  .day h3 { margin: 4px 0 0; }
+  .week-nav { margin-left: 0; width: 100%; }
+  .week-label { flex: 1; }
+}
+@media (max-width: 480px) {
+  .class-item .row-btns, .off-list .row-btns { width: 100%; }
+  .class-item .row-btns .btn, .off-list .row-btns .btn { flex: 1; padding: 10px; }
+  .day-pick span { padding-inline: 0; font-size: 12.5px; }
+  dialog.form-sheet form { padding: 18px 16px; }
+}
+@media (pointer: coarse) { .day-pick span { padding: 10px 6px; } }
+/* Very narrow phones: the two times get the full width, and Remove moves below them. */
+@media (max-width: 400px) {
+  .meet-row { padding: 10px; }
+  .times { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .times .icon-btn { grid-column: 1 / -1; justify-self: end; }
+  /* Tapping the field opens the picker; the clock icon only takes room from the time. */
+  .times input::-webkit-calendar-picker-indicator { display: none; }
+  .times .field-in { padding-inline: 6px; }
+}

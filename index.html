@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TeacherSync</title>
+<meta name="description" content="Plan classes, lessons, assignments, grading and daily tasks in one place.">
+<meta name="theme-color" content="#edf0f4">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TeacherSync">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<script>
+  // Apply a saved light/dark choice before the first paint: settings.theme (src/data/store.js),
+  // or the key version 0.1 used, which the store moves into settings on first start.
+  try {
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem('tsync-settings')); } catch (e) {}
+    var t = s && typeof s === 'object' ? s.theme : localStorage.getItem('tsync-theme');
+    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    var dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#0b1017' : '#edf0f4');
+  } catch (e) {}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<noscript>TeacherSync needs JavaScript turned on.</noscript>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

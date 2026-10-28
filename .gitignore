@@ -1,0 +1,31 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Local secrets and settings (TeacherSync needs none; this keeps any that appear out of Git)
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+.npmrc
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Backups and exports made while testing the app (they can hold real planning data)
+TeacherSync-backup-*.json
+TeacherSync-damaged-data-*.json
