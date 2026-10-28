@@ -11,12 +11,16 @@ export function routeFromHash(hash) {
 
 /** Calls onRoute(route, { initial }) now and on every change. Unknown addresses are replaced with Today's. */
 export function startRouter(onRoute) {
+  let shown = null;
   const go = initial => {
     const route = routeFromHash(location.hash);
     if (location.hash !== hrefFor(route.id)) history.replaceState(null, '', hrefFor(route.id));
+    shown = location.hash;
     onRoute(route, { initial });
   };
-  const onHash = () => go(false);
+  // A late or repeated event for the address already shown is ignored, so a section isn't drawn twice
+  // (which would lose one-time hand-offs such as Week opening Today on a chosen day).
+  const onHash = () => { if (location.hash !== shown) go(false); };
   addEventListener('hashchange', onHash);
   go(true);
   return () => removeEventListener('hashchange', onHash);

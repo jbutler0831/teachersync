@@ -49,6 +49,7 @@ describe('app shell', () => {
   });
 
   it('every section renders, marks its links and moves focus to its heading', () => {
+    go('settings'); // start elsewhere: a browser never signals a change to the address already shown
     for (const r of ROUTES) {
       go(r.id);
       const h1 = document.querySelector('#view h1');
@@ -59,6 +60,13 @@ describe('app shell', () => {
       expect(document.querySelectorAll('a[aria-current="page"]:not([data-route="' + r.id + '"])')).toHaveLength(0);
       if (r.id !== 'today') expect(document.title).toBe(`${r.label} · TeacherSync`);
     }
+  });
+
+  it('a repeated or late signal for the address already shown doesn’t draw it again', () => {
+    go('lessons');
+    const before = document.querySelector('#view section');
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    expect(document.querySelector('#view section')).toBe(before);
   });
 
   it('sends unknown addresses to Today', () => {

@@ -295,7 +295,7 @@ describe('Today', () => {
 
   it('with no assignments: an honest empty note; the quick action starts one on the shown day', () => {
     start('today');
-    expect($('.attention').textContent).toMatch(/Add assignments to see what’s due/);
+    expect($('.attention').textContent).toMatch(/Add assignments or tasks to see what’s due/);
     click($('[data-day="next"]'));
     click($('[data-act="new-assignment"]'));
     expect(sheet().querySelector('[name="assigned"]').value).toBe('2026-11-24');

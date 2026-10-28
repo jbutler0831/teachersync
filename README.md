@@ -2,7 +2,7 @@
 
 Plan classes, lessons, assignments, grading and daily tasks in one place. A web app that installs on phones and computers (a PWA) and works offline. Everything is saved on the device; there are no accounts, no student records and no AI features in version 1.
 
-**Status:** Phases 1–6 of the MVP: the app shell, navigation, themes and offline install; the data layer (classes, days off, lesson plans, assignments, tasks, settings) with backup and restore in Settings; Classes & schedule (classes, weekly meeting times, days off, a dated week); the Today dashboard; Lesson plans; and Assignments & grading. Tasks and Week are still empty, so tasks can't be added yet (only restored from a backup).
+**Status:** Phases 1–8 of the MVP: the app shell, navigation, themes and offline install; the data layer (classes, days off, lesson plans, assignments, tasks, settings) with backup and restore in Settings; Classes & schedule (classes, weekly meeting times, days off, a dated week); the Today dashboard; Lesson plans; Assignments & grading; Tasks with Quick Add; and the Week view with calendar export. Every section is in place.
 
 ## Run it
 
@@ -26,7 +26,7 @@ To try it on a phone, run `npm run dev -- --host` and open the address it prints
 | `src/routes.js` | Every section, its icon, and whether it's in the phone tab bar |
 | `src/router.js` | Hash addresses (`#/today`, `#/lessons`, …), which work on any static host |
 | `src/shell.js` | Sidebar (computers), top bar, tab bar (phones), and showing a section |
-| `src/views/` | One file per section (`classes.js`: Classes & schedule, `lessons.js`: Lesson plans, `assignments.js`: Assignments); `sections.js` holds the ones that are still empty |
+| `src/views/` | One file per section (`today.js`, `week.js`: Week and calendar export, `classes.js`: Classes & schedule, `lessons.js`, `assignments.js`, `tasks.js`: Tasks and Quick Add, `settings.js`); `placeholder.js` has the shared heading and empty-state card |
 | `src/data/` | The data layer (see below) |
 | `src/lib/` | Small shared helpers: storage, theme, dates, toast, dialog, files, HTML escaping, icons |
 | `src/styles/` | `tokens.css` (colors, fonts, light and dark), `base.css` (buttons, panels…), `shell.css` (layout), `views.css` (section pages and form sheets) |
@@ -50,6 +50,9 @@ Everything is saved in this browser's `localStorage`. Nothing is sent anywhere, 
 | `src/data/agenda.js` | What one day holds, for Today: classes with their lesson plans, overdue and due tasks, grading, the next 7 days |
 | `src/data/lessons.js` | Finding lesson plans: search, filters, date groups, a class's next meeting dates, copies |
 | `src/data/assignments.js` | Assignment status rules (past due, late, needs attention) and the list's views, filters and sorting |
+| `src/data/tasks.js` | Task status rules (overdue, due today) and the list's views, filters and sorting |
+| `src/data/week.js` | One week for the Week view: each day's day off, all-day items and class meetings (with their lesson plans) |
+| `src/data/ics.js` | Calendar export: the events of a date range as an iCalendar (.ics) file |
 | `src/data/search.js` | Text search shared by Lesson plans and Assignments |
 | `src/data/index.js` | The app's store, and reloading it when another tab saves a change |
 
@@ -109,6 +112,45 @@ All of it is computed by `src/data/agenda.js` from the store with the same rules
 - **Classes** shows each class's number of assignments and how many are waiting to be graded, linking to that class's list, and an *Add assignment* button.
 
 **Data model (Phase 6):** two optional text fields, `description` (instructions) and `notes`, were added to assignments. Assignments and backups saved before load unchanged and aren't rewritten; no migration or schema version change.
+
+## Tasks & Quick Add
+
+- A task needs only a **title**. Optional: notes, due date, priority (Low, Normal, High; Normal unless chosen) and a class. Most tasks have no class.
+- **Quick Add** (top of Tasks, and in Today's Quick actions): type a title and press Enter or Add. Due date, priority and class are folded under a summary line that shows their current values (*No due date · Normal priority · No class*); they stay as set for the next task. On Today the due date starts as the day shown and follows it. An empty title is refused next to the box. Each added task offers Undo.
+- **Status rules** (`src/data/tasks.js`, used by Tasks and Today):
+  - *Overdue*: not done and due before today. A task due today is *Due today*, not overdue.
+  - Done tasks are never overdue. Reopening one recalculates from its due date (it's overdue again if that date has passed).
+  - Tasks without a due date are never overdue and never get a date invented.
+  - Dates are calendar days in the teacher's own time zone. Records never change just because time passes.
+- **The list** has five views with counts: *To do* (default: every open task; overdue oldest first, then due today, then by date, then no date; higher priority first within each), *Needs attention* (overdue or due today), *Upcoming* (due after today), *Done* (most recently done first) and *All*. Search covers title, notes and class name; filters cover due date (overdue, today, next 7 days, none), priority and class (including *No class*). Complete or reopen with the checkbox; focus moves to the next task's checkbox when a completed one leaves the list. Status is always written out (Overdue, Due today, High priority, Done).
+- **Delete** asks first, removes only that task, and offers Undo.
+- **Today** shows *Overdue tasks* (on today only) and *Tasks due today* (or *this day*), each task in one group only; items and tasks in the next 7 days open the task; *See all in Tasks* opens Needs attention.
+- **Classes** shows a class's open tasks (only when it has some), linking to Tasks for that class. **Deleting a class keeps its tasks** as general tasks (their class is cleared, never the task); the confirmation says so, and Undo links them again unless a task was given another class in the meantime.
+
+**Data model (Phase 7):** tasks gained an optional `classId`. Tasks and backups saved before load unchanged as general tasks and aren't rewritten; no migration or schema version change. The store checks an optional link only when it changes, so a task whose class is gone can still be completed.
+
+## Week & calendar export
+
+- **Week** shows one week, starting on the day set in Settings (Monday or Sunday): previous and next week, a date picker, and *This week*. The label gives the dates and how far the week is from this one (*Next week*, *3 weeks ago*); today is highlighted. Moving between weeks never changes saved data.
+- Each day lists its **day off**, then its **all-day items** (assignment due dates, grading deadlines until graded, lesson plans whose class doesn't meet that day, dated tasks with open ones first), then its **class meetings** in time order, each with that day's lesson plan. Classes don't appear on days off. Every item is labelled in words (*Class, Lesson plan, Due, Grade by, Task, Day off*), with status and *Past due / Late / Overdue* from the same rules as the other sections. Lesson plans and tasks without a date are never placed on a day; a note counts them and links to them.
+- Saturday and Sunday appear only when something is on them (or the week starts on Sunday). A busy day shows five items and *Show N more*.
+- Items open their usual sheets (lesson plan, assignment, task, day off); a class meeting opens a sheet with its lesson plan (or *Plan a lesson* for that day) and *Edit class*. A day's heading opens that day in Today.
+- Layout: a seven-column grid on computers, a wrapping grid on tablets, and one day after another on phones.
+
+**Export to calendar** saves an `.ics` file (iCalendar, RFC 5545; `text/calendar`, named `TeacherSync-<from>-to-<to>.ics`) for the week shown, 4 weeks or 12 weeks, with any of these included:
+
+| Event | Calendar form | Included when |
+|---|---|---|
+| Class meetings | Timed, one event per meeting (no repeat rule), in UTC from the teacher's local time on that date, so daylight-saving changes come out right | the class meets that day and it isn't a day off |
+| Lesson plans | All-day (`VALUE=DATE`) | the plan has a date |
+| Assignment due dates | All-day | there's a due date |
+| Grading deadlines | All-day | there's a deadline and the assignment isn't Graded or Returned |
+| Tasks | All-day | the task is open and has a due date |
+| Days off | All-day, the whole break (exclusive end date) | it overlaps the range |
+
+Each event has a stable `UID` (for example `due-<assignment id>@teachersync.app`, or `class-<class>-<meeting>-<date>@teachersync.app`), a summary that says what it is (*Due:*, *Grade by:*, *Lesson plan:*, *Task:*, *No classes:*) and a category. Text is escaped and lines are folded at 75 octets with CRLF line endings. Only names, rooms and statuses are written: notes, instructions and app timestamps stay in TeacherSync. Records without the dates they need are left out, never given invented ones, and exporting changes nothing saved.
+
+**Export is not sync.** The file is a one-time copy to import into Apple Calendar, Google Calendar or Outlook. Changes made later in TeacherSync don't reach the calendar until you export and import again; calendars that honor UIDs then update the events they already have instead of adding copies. TeacherSync doesn't connect to any calendar service.
 
 ## Known issues
 

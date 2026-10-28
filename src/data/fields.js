@@ -80,9 +80,10 @@ export function stamp() {
 
 export const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
-/** The id of another record (for example a lesson's class). */
-export function ref() {
-  return required(raw => (typeof raw === 'string' && ID_RE.test(raw) ? ok(raw) : bad(null, 'Choose one')));
+/** The id of another record (for example a lesson's class). With `req: false`, it can also be empty (null). */
+export function ref({ req = true } = {}) {
+  const rule = raw => (typeof raw === 'string' && ID_RE.test(raw) ? ok(raw) : !req && empty(raw) ? ok(null) : bad(null, 'Choose one'));
+  return req ? required(rule) : rule;
 }
 
 /**

@@ -109,9 +109,10 @@ export const TYPES = {
     },
   },
   tasks: {
-    label: 'task', plural: 'tasks', max: 5000,
+    label: 'task', plural: 'tasks', max: 5000, refs: { classId: 'classes' },
     fields: {
       title: text(200, { req: true }),
+      classId: ref({ req: false }),               // optional: most tasks aren't about one class
       description: text(2000, { multiline: true }),
       due: date(),
       priority: oneOf(keys(TASK_PRIORITY), 'normal'),
@@ -164,7 +165,7 @@ export function orphansOf(data) {
   for (const [c, t] of Object.entries(TYPES)) {
     for (const [field, target] of Object.entries(t.refs || {})) {
       const ids = new Set((data[target] || []).map(r => r.id));
-      n += (data[c] || []).filter(r => !ids.has(r[field])).length;
+      n += (data[c] || []).filter(r => r[field] && !ids.has(r[field])).length; // an empty optional link isn't missing
     }
   }
   return n;

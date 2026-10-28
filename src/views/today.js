@@ -11,6 +11,7 @@ import { ICONS } from '../lib/icons.js';
 import { classForm, dayOffForm } from './classes.js';
 import { lessonForm, openLesson } from './lessons.js';
 import { assignmentForm, openAssignment, showAssignmentsView } from './assignments.js';
+import { quickAdd, openTask, showTasksView } from './tasks.js';
 
 const TICK_MS = 30000;
 const SHOW = 5; // items per list before "and N more"
@@ -24,12 +25,20 @@ const short = date => fmtDay(fromIso(date));
 const longDate = (date, today) => fmtLongDate(fromIso(date)) + (date.slice(0, 4) !== today.slice(0, 4) ? `, ${date.slice(0, 4)}` : '');
 const more = (list, item) => `${list.slice(0, SHOW).map(item).join('')}${list.length > SHOW ? `<li class="more">and ${list.length - SHOW} more</li>` : ''}`;
 
+// A day another screen asked to show (Week's day headings); used once, by the next render.
+let pendingDay = null;
+/** Opens Today on a given day. */
+export function showTodayOn(date) { pendingDay = date; location.hash = '#/today'; }
+
 export function render(container) {
   container.innerHTML = `<section class="view today"><div data-paint></div><p class="sr" aria-live="polite" data-announce></p></section>`;
   const el = container.querySelector('section.view');
   const state = { clock: new Date(), selected: null };
   state.today = iso(state.clock);
-  state.selected = state.today;
+  state.selected = pendingDay && isIsoDate(pendingDay) ? pendingDay : state.today;
+  pendingDay = null;
+  // What's typed in Quick Add survives redraws; its due date follows the day shown until changed.
+  const qa = { due: state.selected };
   let shownKey = '';
 
   const read = () => ({
@@ -40,16 +49,20 @@ export function render(container) {
   const paint = () => {
     // Put focus back where it was, since the page is redrawn (a store change, the clock, a new day).
     const f = document.activeElement;
-    const key = f && el.contains(f) ? (f.dataset.day && `[data-day="${f.dataset.day}"]`) || (f.dataset.act && `[data-act="${f.dataset.act}"]`) || (f.getAttribute('href') && `a[href="${f.getAttribute('href')}"]`) : null;
+    const key = f && el.contains(f) ? (f.closest('[data-qa]') && (f.name ? `[data-qa] [name="${f.name}"]` : '[data-qa] summary'))
+      || (f.dataset.day && `[data-day="${f.dataset.day}"]`) || (f.dataset.act && `[data-act="${f.dataset.act}"]`) || (f.getAttribute('href') && `a[href="${f.getAttribute('href')}"]`) : null;
     const data = read();
     const agenda = dayAgenda(state.selected, data, { today: state.today, now: hhmm(state.clock) });
     shownKey = keyOf(agenda, state);
     el.querySelector('[data-paint]').innerHTML = page(agenda, data, state);
+    const q = el.querySelector('[data-quick-task]');
+    if (q) quickAdd(q, { state: qa });
     if (key) (el.querySelector(key) || el.querySelector('h1')).focus({ preventScroll: true });
   };
 
   const show = date => {
     state.selected = date;
+    qa.due = date;
     paint();
     const a = dayAgenda(date, read(), { today: state.today });
     el.querySelector('[data-announce]').textContent = `${longDate(date, state.today)}. ${relativeDay(date, state.today)}. ${summary(a, read())}`;
@@ -68,6 +81,8 @@ export function render(container) {
     else if (b.dataset.act === 'plan') lessonForm({ initial: { classId: b.dataset.class, date: state.selected } });
     else if (b.dataset.lesson) openLesson(b.dataset.lesson);
     else if (b.dataset.assignment) openAssignment(b.dataset.assignment);
+    else if (b.dataset.task) openTask(b.dataset.task);
+    else if (b.dataset.act === 'see-tasks') showTasksView('attention');
     else if (b.dataset.act === 'new-assignment') assignmentForm({ initial: { assigned: state.selected } });
     else if (b.dataset.act === 'see-grading') showAssignmentsView('attention');
   });
@@ -80,7 +95,7 @@ export function render(container) {
   const tick = () => {
     if (!el.isConnected) { clearInterval(timer); document.removeEventListener('visibilitychange', tick); return; }
     const clock = new Date(), today = iso(clock);
-    if (today !== state.today && state.selected === state.today) state.selected = today;
+    if (today !== state.today && state.selected === state.today) { state.selected = today; if (qa.due === state.today) qa.due = today; }
     Object.assign(state, { clock, today });
     const agenda = dayAgenda(state.selected, read(), { today, now: hhmm(clock) });
     if (keyOf(agenda, state) !== shownKey) paint();
@@ -204,10 +219,10 @@ function attentionPanel(a, data) {
   const hasWork = data.lessons.length || data.assignments.length || data.tasks.length;
   const head = '<div class="panel-head"><h2>Needs attention</h2></div>';
   if (!hasWork) {
-    return `<div class="panel attention">${head}<div class="panel-body"><p class="note">Nothing waiting. Add assignments to see what’s due and what needs grading here. Tasks are coming in the next update.</p></div></div>`;
+    return `<div class="panel attention">${head}<div class="panel-body"><p class="note">Nothing waiting. Add assignments or tasks to see what’s due and what needs grading here.</p></div></div>`;
   }
   const group = (title, list, item, cls = '', extra = '') => list.length ? `<div class="att-group${cls}"><h3>${title} <span class="count">${list.length}</span></h3><ul>${more(list, item)}</ul>${extra}</div>` : '';
-  const task = t => `<li><b>${esc(t.title)}</b>${t.priority === 'high' ? ' <span class="status s-high">High</span>' : ''}<span class="muted"> · due <span class="mono">${esc(short(t.due))}</span></span></li>`;
+  const task = t => `<li><button class="lesson-chip" type="button" data-task="${esc(t.id)}"><b>${esc(t.title)}</b>${t.priority === 'high' ? ' <span class="status s-high">High</span>' : ''}<span class="muted"> · due <span class="mono">${esc(short(t.due))}</span></span></button></li>`;
   // An assignment that opens when tapped: its title, class and a date (`meta`), then any warning (`flag`).
   const asg = (x, meta = '', flag = '') => `<li><button class="lesson-chip" type="button" data-assignment="${esc(x.assignment.id)}">
     <b>${esc(x.assignment.title)}</b><span class="muted">${x.class ? ` · ${esc(x.class.name)}` : ''}${meta}</span>${flag}</button></li>`;
@@ -215,8 +230,9 @@ function attentionPanel(a, data) {
     x.late ? ' <span class="status s-late">Late</span>' : '');
   const pastDue = x => asg(x, ` · was due <span class="mono">${esc(short(x.assignment.due))}</span>`, ' <span class="status s-late">Past due</span>');
   const groups = [
-    group('Overdue tasks', a.overdue, task, ' crit'),
-    group(a.isToday ? 'Tasks due today' : 'Tasks due this day', a.tasksDue, task),
+    group('Overdue tasks', a.overdue, task, ' crit', a.overdue.length && !a.tasksDue.length ? '<button class="btn chip see-all" type="button" data-act="see-tasks">See all in Tasks</button>' : ''),
+    group(a.isToday ? 'Tasks due today' : 'Tasks due this day', a.tasksDue, task, '',
+      '<button class="btn chip see-all" type="button" data-act="see-tasks">See all in Tasks</button>'),
     group('Past due, not collected', a.pastDue, pastDue, ' crit'),
     group(a.isToday ? 'Assignments due today' : 'Assignments due this day', a.dueOn, x => asg(x, '')),
     // The grading pile is what's waiting now, not tied to the day shown; it says so on other days.
@@ -230,15 +246,16 @@ function attentionPanel(a, data) {
 function upcomingPanel(a, data) {
   if (!data.assignments.length && !data.tasks.length && !data.daysOff.length) return '';
   const label = u => `<span class="mono when">${esc(short(u.date))}</span> <span class="kind k-${u.kind}">${UPCOMING_LABEL[u.kind]}</span> <b>${esc(u.title)}</b>${u.class ? `<span class="muted"> · ${esc(u.class.name)}</span>` : ''}`;
-  const item = u => (u.kind === 'due' || u.kind === 'grade')
-    ? `<li><button class="up-open" type="button" data-assignment="${esc(u.id)}">${label(u)}</button></li>` : `<li>${label(u)}</li>`;
+  const item = u => (u.kind === 'due' || u.kind === 'grade') ? `<li><button class="up-open" type="button" data-assignment="${esc(u.id)}">${label(u)}</button></li>`
+    : u.kind === 'task' ? `<li><button class="up-open" type="button" data-task="${esc(u.id)}">${label(u)}</button></li>` : `<li>${label(u)}</li>`;
   return `<div class="panel upcoming"><div class="panel-head"><h2>Next ${UPCOMING_DAYS} days</h2></div><div class="panel-body">
     ${a.upcoming.length ? `<ul class="up-list">${more(a.upcoming, item)}</ul>` : `<p class="note">Nothing due and no days off in the ${UPCOMING_DAYS} days after ${a.isToday ? 'today' : 'this day'}.</p>`}
   </div></div>`;
 }
 
 function quickPanel(a) {
-  return `<div class="panel quick"><div class="panel-head"><h2>Quick actions</h2></div><div class="panel-body stack">
+  return `<div class="panel quick"><div class="panel-head"><h2>Quick actions</h2><a class="head-link" href="#/tasks">All tasks</a></div><div class="panel-body stack">
+    <div data-quick-task></div>
     <div class="quick-btns">
       <button class="btn" type="button" data-act="new-lesson">New lesson plan${a.isToday ? '' : ` for ${esc(short(a.date))}`}</button>
       <button class="btn" type="button" data-act="new-assignment">New assignment</button>
@@ -246,6 +263,5 @@ function quickPanel(a) {
       <button class="btn" type="button" data-act="add-off">Add a day off${a.isToday ? '' : ` on ${esc(short(a.date))}`}</button>
       <a class="btn" href="#/classes">Classes & schedule</a>
     </div>
-    <p class="note small">Adding tasks comes with the Tasks section.</p>
   </div></div>`;
 }

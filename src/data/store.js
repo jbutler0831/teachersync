@@ -159,10 +159,13 @@ export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemo
   const known = c => { if (!COLLECTIONS.includes(c)) throw new Error(`Unknown collection: ${c}`); };
   const ctx = () => ({ settings: data.settings, now: now() });
 
-  function checkRefs(c, record, within = data) {
+  function checkRefs(c, record, within = data, prev = null) {
     const errors = {};
     for (const [field, target] of Object.entries(TYPES[c].refs || {})) {
-      if (!within[target].some(r => r.id === record[field])) errors[field] = `Choose a ${TYPES[target].label}`;
+      // An empty optional link (a task with no class) is fine; a required one never gets here empty.
+      // An optional link that didn't change isn't re-checked, so a task whose class is gone can still be completed.
+      if (!TYPES[c].fields[field].required && prev && record[field] === prev[field]) continue;
+      if (record[field] && !within[target].some(r => r.id === record[field])) errors[field] = `Choose a ${TYPES[target].label}`;
     }
     return errors;
   }
@@ -174,7 +177,7 @@ export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemo
     const ready = t.prepare ? t.prepare(base, prev, ctx()) : base;
     const { record, errors } = cleanRecord(c, ready, { strict: true, now: now() });
     if (!record) return { errors };
-    const refErrors = checkRefs(c, record);
+    const refErrors = checkRefs(c, record, data, prev);
     if (Object.keys(refErrors).length) return { errors: refErrors };
     if (!prev) record.id = newId();
     record.updatedAt = Math.max(now(), (prev && prev.updatedAt + 1) || 0);
@@ -201,8 +204,10 @@ export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemo
   }
 
   /**
-   * Removes a record. Removing a class also removes its lesson plans and assignments, after a safety copy.
-   * Returns `removed` ({ collection: [records] }), which restoreRemoved() puts back (for Undo).
+   * Removes a record. Removing a class also removes its lesson plans and assignments, after a safety copy;
+   * its tasks are kept as general tasks (their class is cleared), since a to-do shouldn't vanish with a class.
+   * Returns `removed` ({ collection: [records], unlinkedTasks: [tasks as they were] }), which restoreRemoved()
+   * puts back (for Undo).
    */
   function remove(c, id) {
     known(c);
@@ -216,12 +221,19 @@ export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemo
         const hit = data[dep].filter(r => r.classId === id);
         if (hit.length) removed[dep] = hit;
       }
+      const linked = data.tasks.filter(t => t.classId === id);
+      if (linked.length) removed.unlinkedTasks = linked;
       if (Object.keys(removed).length > 1 && !snapshot(`Before removing the class “${target.name}”`)) return fail(MESSAGES.noSafetyCopy);
     }
     const changes = {};
     for (const [k, list] of Object.entries(removed)) {
+      if (k === 'unlinkedTasks') continue;
       const ids = new Set(list.map(r => r.id));
       changes[k] = data[k].filter(r => !ids.has(r.id));
+    }
+    if (removed.unlinkedTasks) {
+      const t = now();
+      changes.tasks = data.tasks.map(r => (r.classId === id ? freeze({ ...r, classId: null, updatedAt: Math.max(t, r.updatedAt + 1) }) : r));
     }
     const res = commit(changes);
     return res.ok ? { ok: true, removed } : res;
@@ -241,6 +253,20 @@ export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemo
       const back = removed[c].filter(r => isPlainObject(r) && !have.has(r.id) && !Object.keys(checkRefs(c, r, current)).length)
         .map(r => cleanRecord(c, r).record).filter(Boolean).map(freeze);
       if (back.length) changes[c] = [...data[c], ...back];
+    }
+    // Tasks that lost their class when it was removed get it back, if they still have no class and it's back.
+    if (removed && Array.isArray(removed.unlinkedTasks)) {
+      const was = new Map(removed.unlinkedTasks.filter(isPlainObject).map(t => [t.id, t.classId]));
+      const classes = (changes.classes || data.classes);
+      const tasks = changes.tasks || data.tasks;
+      let relinked = false;
+      const next = tasks.map(t => {
+        const cls = was.get(t.id);
+        if (!cls || t.classId || !classes.some(c => c.id === cls)) return t;
+        relinked = true;
+        return freeze({ ...t, classId: cls });
+      });
+      if (relinked) changes.tasks = next;
     }
     return Object.keys(changes).length ? commit(changes) : { ok: true };
   }

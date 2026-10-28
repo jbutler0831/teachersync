@@ -92,7 +92,7 @@ describe('today’s classes', () => {
   });
 
   it('honest about what isn’t built yet', () => {
-    expect($('.attention').textContent).toMatch(/Add assignments to see.*Tasks are coming/s);
+    expect($('.attention').textContent).toMatch(/Add assignments or tasks to see what’s due/);
     expect($('.attention .count')).toBeNull();
     expect($('.upcoming')).toBeNull(); // nothing that could be coming up exists
     expect($('.quick').textContent).toMatch(/Add a class.*Add a day off.*Classes & schedule/s);

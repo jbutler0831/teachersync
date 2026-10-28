@@ -1,9 +1,11 @@
 // What one day holds, for Today: the classes that meet (with that day's lesson plans), what needs attention,
 // and what's coming up. Built from the store's data with schedule.js's rules, so Today never keeps its own copy.
-// Only explicit statuses count: assignments follow assignments.js (past due, To grade, late), a task is open until
-// it's marked done. Each assignment appears in at most one of dueOn, pastDue and toGrade.
+// Only explicit statuses count: assignments follow assignments.js (past due, To grade, late) and tasks follow
+// tasks.js (open until marked done; overdue after their due date).
+// Each assignment appears in at most one of dueOn, pastDue and toGrade; each task in at most one of overdue and tasksDue.
 import { meetingsOn, dayOffOn } from './schedule.js';
 import { isLate, isPastDue } from './assignments.js';
+import { isOverdue } from './tasks.js';
 import { addDays, fromIso, iso } from '../lib/dates.js';
 
 export const UPCOMING_DAYS = 7;
@@ -51,7 +53,7 @@ export function dayAgenda(date, data, { today = date, now = null } = {}) {
   const upcoming = [
     ...assignments.filter(a => a.status === 'assigned' && soon(a.due)).map(a => ({ id: a.id, date: a.due, kind: 'due', title: a.title, class: classById.get(a.classId) || null })),
     ...assignments.filter(a => a.status === 'to-grade' && soon(a.gradeBy)).map(a => ({ id: a.id, date: a.gradeBy, kind: 'grade', title: a.title, class: classById.get(a.classId) || null })),
-    ...open.filter(t => soon(t.due)).map(t => ({ id: t.id, date: t.due, kind: 'task', title: t.title, class: null })),
+    ...open.filter(t => soon(t.due)).map(t => ({ id: t.id, date: t.due, kind: 'task', title: t.title, class: classById.get(t.classId) || null })),
     ...daysOff.filter(d => soon(d.start)).map(d => ({ id: d.id, date: d.start, kind: 'off', title: d.title, class: null })),
   ].sort((a, b) => a.date.localeCompare(b.date) || a.kind.localeCompare(b.kind) || a.title.localeCompare(b.title));
 
@@ -65,7 +67,8 @@ export function dayAgenda(date, data, { today = date, now = null } = {}) {
     otherLessons,
     draftLessons: dayLessons.filter(l => l.status === 'draft').length,
     tasksDue: open.filter(t => t.due === date).sort(byPriority),
-    overdue: isToday ? open.filter(t => t.due < today).sort((a, b) => a.due.localeCompare(b.due) || byPriority(a, b)) : [],
+    // Overdue is measured from the real today and shown only on today; on other days a task due then is in tasksDue.
+    overdue: isToday ? open.filter(t => isOverdue(t, today)).sort((a, b) => a.due.localeCompare(b.due) || byPriority(a, b)) : [],
     toGrade,
     dueOn,
     pastDue,

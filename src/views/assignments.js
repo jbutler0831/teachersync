@@ -34,8 +34,8 @@ export function statusPills(a, today = todayIso()) {
   return `${pill(a.status)}${isLate(a, today) ? ' <span class="status s-late">Late</span>' : ''}${isPastDue(a, today) ? ' <span class="status s-late">Past due</span>' : ''}`;
 }
 
-/** "Due Mon, Nov 23 (in 3 days)", "Due today", "Grade by Fri, Nov 20 (3 days ago)". */
-function when(label, date, today) {
+/** "Due Mon, Nov 23 (in 3 days)", "Due today", "Grade by Fri, Nov 20 (3 days ago)". Also used by Tasks. */
+export function when(label, date, today) {
   const rel = relativeDay(date, today);
   return ['Today', 'Tomorrow', 'Yesterday'].includes(rel) ? `${label} ${rel.toLowerCase()}` : `${label} ${short(date)} (${rel.toLowerCase()})`;
 }

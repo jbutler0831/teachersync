@@ -263,3 +263,78 @@ dialog.sheet form, .sheet-body, .callout, .view-head, .empty, .stack, .snap-list
 .today [data-paint], .today-main, .slot-main, .off-banner, .other-lessons ul, .att-group ul, .up-list, .quick-btns {
   grid-template-columns: minmax(0, 1fr);
 }
+
+/* Tasks */
+.quick-add { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.qa-row { display: flex; gap: 8px; min-width: 0; }
+.qa-row .field-in { flex: 1; min-width: 0; height: 42px; font-size: 15px; }
+.qa-row .btn { min-height: 42px; padding-inline: 18px; }
+.qa-more summary { cursor: pointer; color: var(--muted); font-size: 13px; padding: 6px 0; min-height: 36px; display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+.qa-more summary::before { content: '▸'; font-size: 11px; transition: transform .15s; }
+.qa-more[open] summary::before { transform: rotate(90deg); }
+.qa-more summary::-webkit-details-marker { display: none; }
+.qa-more summary { list-style: none; }
+.qa-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; padding-top: 6px; }
+.qa-opts .field > span { font-size: 12.5px; color: var(--muted); }
+.qa-opts .field-in { width: 100%; height: 40px; }
+.task-item { padding-left: 10px; }
+.task-item .lesson-open { padding-left: 4px; }
+.task-check { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; cursor: pointer; }
+.task-check:hover { background: var(--surface-2); }
+.task-check input { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.task-item.is-done .lesson-open b { text-decoration: line-through; color: var(--muted); }
+.task-item.is-done { box-shadow: none; }
+.check-line { display: flex; align-items: center; gap: 10px; min-height: 40px; font-weight: 600; }
+.check-line input { width: 20px; height: 20px; accent-color: var(--accent); }
+.task-item .row-btns { padding-left: 54px; }
+@media (max-width: 480px) {
+  .task-item { padding-left: 6px; }
+  .task-item .lesson-open { flex: 1 1 0; }
+  .task-item .row-btns { padding-left: 12px; }
+}
+
+/* Week */
+/* The week is redrawn inside [data-paint], so it carries the page's spacing. */
+.week [data-paint] { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+.week-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.week-bar .day-nav { flex: 1 1 auto; }
+.week-bar .day-jump { margin-left: 0; }
+.week-legend { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.kind.k-class { background: var(--surface-2); color: var(--ink); border: 1px solid var(--line); }
+.kind.k-lesson { background: var(--good-soft); color: var(--good); }
+.kind.k-due { background: var(--crit-soft); color: var(--crit); }
+.kind.k-task { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+.week-cal { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(var(--days), minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+.wk-day { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 6px; padding: 10px 8px 12px; border-right: 1px solid var(--line); min-width: 0; min-height: 160px; }
+.wk-day:last-child { border-right: 0; }
+.wk-day.is-today { background: color-mix(in srgb, var(--accent-soft) 45%, transparent); }
+.wk-day.is-past .wk-head button { color: var(--faint); }
+.wk-day.is-off { background: repeating-linear-gradient(-45deg, transparent 0 8px, color-mix(in srgb, var(--line) 35%, transparent) 8px 9px); }
+.wk-head { margin: 0; }
+.wk-head button { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; min-height: 36px; padding: 4px 6px; border: 0; border-radius: 6px; background: none; color: var(--muted); font: 600 12.5px/1.2 var(--f-mono); text-align: left; cursor: pointer; }
+.wk-head button:hover { background: var(--surface-2); color: var(--ink); }
+.wk-day.is-today .wk-head button { color: var(--ink); }
+.wk-items { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.wk-item { display: grid; grid-template-columns: minmax(0, 1fr); border-radius: 7px; border: 1px solid var(--line); border-left: 3px solid var(--c, var(--line)); background: var(--surface); min-width: 0; }
+.wk-item.k-class { background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+.wk-item > button, .wk-off { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; width: 100%; min-height: 36px; padding: 6px 8px; border: 0; background: none; color: var(--ink); text-align: left; font-size: 13px; cursor: pointer; border-radius: 6px; overflow-wrap: anywhere; min-width: 0; }
+.wk-item > button:hover, .wk-off:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.wk-item b { flex-basis: 100%; font-weight: 600; min-width: 0; }
+.wk-meta, .wk-time { flex-basis: 100%; color: var(--muted); font-size: 12px; min-width: 0; }
+.wk-time { order: -1; }
+.wk-item.is-done b { text-decoration: line-through; color: var(--muted); }
+.wk-lesson { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 0 6px 6px; padding: 4px 6px; min-height: 36px; border: 1px dashed var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); text-align: left; font-size: 12.5px; cursor: pointer; overflow-wrap: anywhere; min-width: 0; }
+.wk-off { border-radius: 7px; background: var(--warn-soft); font-weight: 600; color: var(--warn); }
+.wk-day .none { margin: 0; padding: 0 6px; color: var(--faint); font-size: 12.5px; }
+.wk-more { justify-self: start; }
+/* Tablets: a compact grid that wraps rows; phones: one day after another. */
+@media (max-width: 1099px) {
+  .week-cal { grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); }
+  .wk-day { border-bottom: 1px solid var(--line); }
+}
+@media (max-width: 599px) {
+  .week-cal { grid-template-columns: minmax(0, 1fr); }
+  .wk-day { border-right: 0; min-height: 0; padding: 10px 10px 12px; }
+  .wk-head button { font-size: 13.5px; }
+  .week-bar > .btn { width: 100%; }
+}

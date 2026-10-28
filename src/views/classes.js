@@ -11,6 +11,7 @@ import { ICONS } from '../lib/icons.js';
 import { viewHead } from './placeholder.js';
 import { lessonForm, showLessonsFor, openLesson } from './lessons.js';
 import { assignmentForm, showAssignmentsFor } from './assignments.js';
+import { showTasksFor } from './tasks.js';
 
 const KIND_LABEL = Object.fromEntries(DAY_OFF_KINDS);
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -18,8 +19,8 @@ const timeRange = m => `${fmtTime(m.start)}–${fmtTime(m.end)}`;
 const weekOrder = ws => Array.from({ length: 7 }, (_, i) => (i + ws) % 7);
 const dayList = days => days.map(d => shortWeekday(d)).join(', ');
 
-/** "Nov 26" or "Nov 25 – 27" or "Dec 21 – Jan 1". */
-function fmtRange(start, end) {
+/** "Nov 26" or "Nov 25 – 27" or "Dec 21 – Jan 1". Also used by Week. */
+export function fmtRange(start, end) {
   const a = fromIso(start), b = fromIso(end || start);
   const md = d => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   if (start === (end || start)) return fmtDay(a);
@@ -62,6 +63,7 @@ export function render(container, now = new Date()) {
     else if (act === 'open-lesson') openLesson(id);
     else if (act === 'class-assignments') showAssignmentsFor(id);
     else if (act === 'add-assignment') assignmentForm({ initial: { classId: id } });
+    else if (act === 'class-tasks') showTasksFor(id);
     else if (act === 'edit-off') { const d = store.get('daysOff', id); if (d) dayOffForm(d); }
     else if (act === 'delete-off') deleteDayOff(id);
     else if (act === 'week') {
@@ -116,6 +118,7 @@ function classItem(c, classes, ws, today) {
       ${c.notes ? `<p class="class-notes">${esc(c.notes)}</p>` : ''}
       ${classLessons(c, today)}
       ${classAssignments(c)}
+      ${classTasks(c)}
     </div>
     <div class="row-btns">
       <button class="btn" type="button" data-act="edit-class" data-id="${esc(c.id)}" aria-label="Edit ${esc(c.name)}">Edit</button>
@@ -144,6 +147,13 @@ function classAssignments(c) {
     ${mine.length ? `<button class="btn chip" type="button" data-act="class-assignments" data-id="${esc(c.id)}" aria-label="${esc(label)}, ${esc(c.name)}">${esc(label)}</button>` : '<span class="muted">No assignments yet</span>'}
     <button class="btn chip" type="button" data-act="add-assignment" data-id="${esc(c.id)}" aria-label="Add an assignment for ${esc(c.name)}">Add assignment</button>
   </div>`;
+}
+
+// Open tasks linked to the class, only when there are some (most tasks aren't about one class).
+function classTasks(c) {
+  const open = store.all('tasks').filter(t => t.classId === c.id && !t.done).length;
+  if (!open) return '';
+  return `<div class="class-lessons"><button class="btn chip" type="button" data-act="class-tasks" data-id="${esc(c.id)}" aria-label="${esc(plural(open, 'open task', 'open tasks'))} for ${esc(c.name)}">${esc(plural(open, 'open task', 'open tasks'))}</button></div>`;
 }
 
 /* ---------- The week, with dates ---------- */
@@ -363,10 +373,12 @@ async function deleteClass(id) {
   const lessons = store.all('lessons').filter(l => l.classId === id).length;
   const assignments = store.all('assignments').filter(a => a.classId === id).length;
   const also = [lessons && plural(lessons, 'lesson plan', 'lesson plans'), assignments && plural(assignments, 'assignment', 'assignments')].filter(Boolean);
+  const tasks = store.all('tasks').filter(t => t.classId === id).length;
   const choice = await ask({
     title: `Delete ${c.name}?`,
     body: `<p>It will be removed from your classes and schedule.</p>
-      ${also.length ? `<p>Its <strong>${esc(also.join(' and '))}</strong> will be deleted too. A safety copy is saved first (Settings → Safety copies).</p>` : ''}`,
+      ${also.length ? `<p>Its <strong>${esc(also.join(' and '))}</strong> will be deleted too. A safety copy is saved first (Settings → Safety copies).</p>` : ''}
+      ${tasks ? `<p>Its ${esc(plural(tasks, 'task is', 'tasks are'))} kept, without a class.</p>` : ''}`,
     actions: [{ label: 'Delete class', value: 'delete', primary: true, danger: true }],
   });
   if (choice !== 'delete') return;
