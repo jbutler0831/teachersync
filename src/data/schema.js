@@ -10,7 +10,8 @@ export const SCHEMA_VERSION = 1;
 export const COLLECTIONS = ['classes', 'daysOff', 'lessons', 'assignments', 'tasks'];
 
 export const CLASS_COLORS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'];
-export const LESSON_STATUS = [['draft', 'Draft'], ['ready', 'Ready'], ['taught', 'Taught']];
+// 'ready' is shown as Planned: ready for its date. The stored keys stay as they were, so saved data and backups still match.
+export const LESSON_STATUS = [['draft', 'Draft'], ['ready', 'Planned'], ['taught', 'Taught']];
 export const ASSIGNMENT_STATUS = [['assigned', 'Assigned'], ['to-grade', 'To grade'], ['graded', 'Graded'], ['returned', 'Returned']];
 export const TASK_PRIORITY = [['low', 'Low'], ['normal', 'Normal'], ['high', 'High']];
 export const DAY_OFF_KINDS = [['holiday', 'Holiday'], ['break', 'Break'], ['other', 'Other']];
@@ -69,10 +70,12 @@ export const TYPES = {
     label: 'lesson plan', plural: 'lesson plans', max: 10000, refs: { classId: 'classes' },
     fields: {
       classId: ref(),
-      date: date({ req: true }),
+      date: date(),                                // optional: a plan can be prepared before it's scheduled
       title: text(120, { req: true }),
       objectives: text(5000, { multiline: true }),
+      activities: text(10000, { multiline: true }), // lesson content, instructions and steps
       materials: text(5000, { multiline: true }),
+      assessment: text(5000, { multiline: true }), // closing or check for understanding
       notes: text(5000, { multiline: true }),
       status: oneOf(keys(LESSON_STATUS), 'draft'),
     },

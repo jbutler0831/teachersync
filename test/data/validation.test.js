@@ -94,7 +94,8 @@ describe('records', () => {
   });
 
   it('loading drops records missing something required', () => {
-    expect(cleanRecord('lessons', { classId: 'c1', title: 'No date' }).record).toBeNull();
+    expect(cleanRecord('lessons', { classId: 'c1', date: '2026-10-27' }).record).toBeNull();   // no title
+    expect(cleanRecord('lessons', { title: 'No class' }).record).toBeNull();
     expect(cleanRecord('tasks', { title: '' }).record).toBeNull();
     expect(cleanRecord('tasks', 'not an object').record).toBeNull();
     expect(cleanRecord('tasks', null).record).toBeNull();

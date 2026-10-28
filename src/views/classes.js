@@ -9,6 +9,7 @@ import { toast } from '../lib/toast.js';
 import { esc } from '../lib/dom.js';
 import { ICONS } from '../lib/icons.js';
 import { viewHead } from './placeholder.js';
+import { lessonForm, showLessonsFor, openLesson } from './lessons.js';
 
 const KIND_LABEL = Object.fromEntries(DAY_OFF_KINDS);
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -42,7 +43,7 @@ export function render(container, now = new Date()) {
 
   const paint = () => {
     const ws = store.settings().weekStartsOn;
-    el.querySelector('#classesPanel').innerHTML = classesPanel(ws);
+    el.querySelector('#classesPanel').innerHTML = classesPanel(ws, today);
     el.querySelector('#schedulePanel').innerHTML = store.all('classes').length ? schedulePanel(shown, today, ws) : '';
     el.querySelector('#daysOffPanel').innerHTML = daysOffPanel(today);
   };
@@ -55,6 +56,9 @@ export function render(container, now = new Date()) {
     else if (act === 'edit-class') { const c = store.get('classes', id); if (c) classForm(c); }
     else if (act === 'delete-class') deleteClass(id);
     else if (act === 'add-off') dayOffForm();
+    else if (act === 'class-lessons') showLessonsFor(id);
+    else if (act === 'plan-for') lessonForm({ initial: { classId: id } });
+    else if (act === 'open-lesson') openLesson(id);
     else if (act === 'edit-off') { const d = store.get('daysOff', id); if (d) dayOffForm(d); }
     else if (act === 'delete-off') deleteDayOff(id);
     else if (act === 'week') {
@@ -70,7 +74,7 @@ export function render(container, now = new Date()) {
 
 /* ---------- Classes list ---------- */
 
-function classesPanel(ws) {
+function classesPanel(ws, today) {
   const classes = store.all('classes');
   if (!classes.length) {
     return `<div class="panel empty">
@@ -84,7 +88,7 @@ function classesPanel(ws) {
   return `<div class="panel">
     <div class="panel-head"><h2>Classes</h2><span class="count">${classes.length}</span>
       <button class="btn primary head-btn" type="button" data-act="add-class">Add class</button></div>
-    <ul class="class-list">${sorted.map(c => classItem(c, classes, ws)).join('')}</ul>
+    <ul class="class-list">${sorted.map(c => classItem(c, classes, ws, today)).join('')}</ul>
   </div>`;
 }
 
@@ -94,7 +98,7 @@ const firstMeeting = (c, ws) => {
   return g[0] || '9';
 };
 
-function classItem(c, classes, ws) {
+function classItem(c, classes, ws, today) {
   const meta = [c.subject, c.room && `Room ${c.room}`].filter(Boolean).join(' · ');
   const clashes = conflicts(c.meetings, classes, c.id);
   const clashNames = [...new Set(clashes.map(x => x.class.name))];
@@ -107,12 +111,24 @@ function classItem(c, classes, ws) {
         : '<p class="note small">No meeting times yet. Edit the class to add them.</p>'}
       ${clashNames.length ? `<p class="clash">Overlaps ${esc(clashNames.join(', '))}</p>` : ''}
       ${c.notes ? `<p class="class-notes">${esc(c.notes)}</p>` : ''}
+      ${classLessons(c, today)}
     </div>
     <div class="row-btns">
       <button class="btn" type="button" data-act="edit-class" data-id="${esc(c.id)}" aria-label="Edit ${esc(c.name)}">Edit</button>
       <button class="btn danger" type="button" data-act="delete-class" data-id="${esc(c.id)}" aria-label="Delete ${esc(c.name)}">Delete</button>
     </div>
   </li>`;
+}
+
+// The class's lesson plans: how many, the next one, and a way to plan one.
+function classLessons(c, today) {
+  const mine = store.all('lessons').filter(l => l.classId === c.id);
+  const next = mine.filter(l => l.date && l.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
+  return `<div class="class-lessons">
+    ${mine.length ? `<button class="btn chip" type="button" data-act="class-lessons" data-id="${esc(c.id)}" aria-label="${esc(plural(mine.length, 'lesson plan', 'lesson plans'))} for ${esc(c.name)}">${esc(plural(mine.length, 'lesson plan', 'lesson plans'))}</button>` : '<span class="muted">No lesson plans yet</span>'}
+    ${next ? `<span class="muted">Next:</span> <button class="btn chip" type="button" data-act="open-lesson" data-id="${esc(next.id)}"><b>${esc(next.title)}</b>&nbsp;<span class="mono">${esc(fmtDay(fromIso(next.date)))}</span></button>` : ''}
+    <button class="btn chip" type="button" data-act="plan-for" data-id="${esc(c.id)}" aria-label="Plan a lesson for ${esc(c.name)}">Plan a lesson</button>
+  </div>`;
 }
 
 /* ---------- The week, with dates ---------- */

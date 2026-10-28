@@ -25,8 +25,8 @@ function sheet(cls = '') {
 }
 
 /** A question with buttons. Resolves with the chosen button's value, or null if dismissed. */
-export function ask({ title, body = '', actions, cancel = 'Cancel' }) {
-  const d = sheet();
+export function ask({ title, body = '', actions, cancel = 'Cancel', cls = '' }) {
+  const d = sheet(cls);
   d.innerHTML = `<form method="dialog">
     <h2 id="sheetTitle${count}">${esc(title)}</h2>
     <div class="sheet-body">${body}</div>

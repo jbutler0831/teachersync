@@ -13,18 +13,6 @@ export const week = placeholder({
   },
 });
 
-export const lessons = placeholder({
-  eyebrow: 'Planning',
-  title: 'Lesson plans',
-  lede: 'Plan what you’re teaching each class, each day.',
-  empty: {
-    icon: 'lessons',
-    heading: 'No lesson plans yet',
-    body: 'Write a plan for any class and day, then mark it ready or taught.',
-    points: ['Objectives, materials and notes', 'Draft → Ready → Taught', 'Copy a plan to another day or class'],
-  },
-});
-
 export const assignments = placeholder({
   eyebrow: 'Grading',
   title: 'Assignments',

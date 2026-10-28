@@ -2,7 +2,7 @@
 
 Plan classes, lessons, assignments, grading and daily tasks in one place. A web app that installs on phones and computers (a PWA) and works offline. Everything is saved on the device; there are no accounts, no student records and no AI features in version 1.
 
-**Status:** Phases 1–4 of the MVP: the app shell, navigation, themes and offline install; the data layer (classes, days off, lesson plans, assignments, tasks, settings) with backup and restore in Settings; Classes & schedule (classes, weekly meeting times, days off, a dated week); and the Today dashboard. Lessons, Assignments, Tasks and Week are still empty, so lesson plans, assignments and tasks can't be added yet (only restored from a backup).
+**Status:** Phases 1–5 of the MVP: the app shell, navigation, themes and offline install; the data layer (classes, days off, lesson plans, assignments, tasks, settings) with backup and restore in Settings; Classes & schedule (classes, weekly meeting times, days off, a dated week); the Today dashboard; and Lesson plans. Assignments, Tasks and Week are still empty, so assignments and tasks can't be added yet (only restored from a backup).
 
 ## Run it
 
@@ -26,7 +26,7 @@ To try it on a phone, run `npm run dev -- --host` and open the address it prints
 | `src/routes.js` | Every section, its icon, and whether it's in the phone tab bar |
 | `src/router.js` | Hash addresses (`#/today`, `#/lessons`, …), which work on any static host |
 | `src/shell.js` | Sidebar (computers), top bar, tab bar (phones), and showing a section |
-| `src/views/` | One file per section (`classes.js`: Classes & schedule); `sections.js` holds the ones that are still empty |
+| `src/views/` | One file per section (`classes.js`: Classes & schedule, `lessons.js`: Lesson plans); `sections.js` holds the ones that are still empty |
 | `src/data/` | The data layer (see below) |
 | `src/lib/` | Small shared helpers: storage, theme, dates, toast, dialog, files, HTML escaping, icons |
 | `src/styles/` | `tokens.css` (colors, fonts, light and dark), `base.css` (buttons, panels…), `shell.css` (layout), `views.css` (section pages and form sheets) |
@@ -48,6 +48,7 @@ Everything is saved in this browser's `localStorage`. Nothing is sent anywhere, 
 | `src/data/backup.js` | Backup files: make, read and check, merge |
 | `src/data/schedule.js` | Which classes meet on a date (weekly schedules, skipping days off), overlapping meeting times, a week's dates |
 | `src/data/agenda.js` | What one day holds, for Today: classes with their lesson plans, overdue and due tasks, grading, the next 7 days |
+| `src/data/lessons.js` | Finding lesson plans: search, filters, date groups, a class's next meeting dates, copies |
 | `src/data/index.js` | The app's store, and reloading it when another tab saves a change |
 
 **Keys:** `tsync-classes`, `tsync-days-off`, `tsync-lessons`, `tsync-assignments`, `tsync-tasks`, `tsync-settings`, `tsync-meta` (schema version), `tsync-snapshots` (safety copies) and `tsync-damaged` (originals of anything that couldn't be read). Every key starts with `tsync-` (`src/lib/storage.js`), so TeacherSync never reads or overwrites SemesterSync's `ssync-` data or anything else.
@@ -77,6 +78,18 @@ The home screen answers what's on, what needs attention and what's next, for tod
 - **Days:** previous and next, a date picker, and Back to today. Another day's heading says which day it is and how far from today ("In 2 days"); the year is shown when it isn't this year.
 
 All of it is computed by `src/data/agenda.js` from the store with the same rules as Classes & schedule (`schedule.js`); Today keeps no data of its own.
+
+## Lesson plans
+
+- A plan needs a **title** and a **class**. Everything else is optional: date, objectives, lesson & activities, materials & resources, closing & assessment, notes. A plan with no date is kept under *No date yet* until it's scheduled.
+- **Status:** Draft (still being prepared), Planned (ready for its date), Taught (kept for reuse). Stored as `draft`, `ready` and `taught`, as since Phase 2; only the label of `ready` changed (Ready → Planned).
+- The form suggests the class's next meeting dates (skipping days off) and says when the chosen date is a day off or a day the class doesn't meet. It still saves: plans can be written for any day.
+- **Lesson plans** lists upcoming and unscheduled plans by date (soonest first) and can search (title, every text field and the class name; accents and case don't matter) and filter by class, status and date (upcoming, past, no date, all, or one day). On phones the class, status and date filters fold behind a Filters button.
+- **Duplicate** opens a copy as a new Draft with no date, for another day or class; saving it creates a new plan and never changes the original.
+- **Delete** asks first, removes only that plan, and offers Undo. Deleting a class still removes its plans (and assignments) after a safety copy, as before.
+- **Today** shows each class's plan and status, opens it, and offers *Plan a lesson* (for that class and day) when there isn't one. **Classes** shows each class's number of plans and the next one, links to its plans, and offers *Plan a lesson*. All of them open the same sheets and read the same records, so a change shows everywhere at once.
+
+**Data model (Phase 5):** two optional text fields, `activities` and `assessment`, were added to lesson plans, and their `date` became optional. Both changes are backward compatible: plans and backups saved before load unchanged (the new fields read as empty, and they aren't rewritten just to add them), so no migration or schema version change was needed.
 
 ## Known issues
 

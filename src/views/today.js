@@ -9,6 +9,7 @@ import { iso, fromIso, addDays, fmtLongDate, fmtDay, fmtTime, greeting } from '.
 import { esc } from '../lib/dom.js';
 import { ICONS } from '../lib/icons.js';
 import { classForm, dayOffForm } from './classes.js';
+import { lessonForm, openLesson } from './lessons.js';
 
 const TICK_MS = 30000;
 const SHOW = 5; // items per list before "and N more"
@@ -62,6 +63,9 @@ export function render(container) {
     else if (b.dataset.day === 'go') show(b.dataset.date);
     else if (b.dataset.act === 'add-class') classForm();
     else if (b.dataset.act === 'add-off') dayOffForm(null, { start: state.selected });
+    else if (b.dataset.act === 'new-lesson') lessonForm({ initial: { date: state.selected } });
+    else if (b.dataset.act === 'plan') lessonForm({ initial: { classId: b.dataset.class, date: state.selected } });
+    else if (b.dataset.lesson) openLesson(b.dataset.lesson);
   });
   el.addEventListener('change', e => {
     if (e.target.dataset.day === 'pick' && isIsoDate(e.target.value)) show(e.target.value);
@@ -168,7 +172,7 @@ function schedulePanel(a, data) {
         <button class="btn" type="button" data-day="go" data-date="${esc(nxt.date)}">Show that day</button></p>` : ''}`;
   }
   const others = a.otherLessons.length ? `<div class="panel-body other-lessons"><h3>Other lesson plans for this day</h3>
-      <ul>${a.otherLessons.map(x => `<li>${lessonLine(x.lesson)} <span class="muted">· ${esc(x.class ? x.class.name : 'No class')}</span></li>`).join('')}</ul></div>` : '';
+      <ul>${a.otherLessons.map(x => `<li><button class="lesson-chip" type="button" data-lesson="${esc(x.lesson.id)}">${lessonLine(x.lesson)} <span class="muted">· ${esc(x.class ? x.class.name : 'Missing class')}</span></button></li>`).join('')}</ul></div>` : '';
   return `<div class="panel" id="todayClasses">${head}<div class="panel-body">${body}</div>${others}</div>`;
 }
 
@@ -183,8 +187,8 @@ function slot(x, a, data) {
     <div class="slot-main">
       <h3>${esc(c.name)}${x.when === 'now' ? ' <span class="badge">Now</span>' : isNext ? ' <span class="badge next">Next</span>' : ''}${x.when === 'done' ? '<span class="sr"> (finished)</span>' : ''}</h3>
       ${meta ? `<p class="slot-meta">${esc(meta)}</p>` : ''}
-      ${x.lessons.map(l => `<p class="slot-lesson">${lessonLine(l)}</p>`).join('')}
-      ${!x.lessons.length && data.lessons.length ? '<p class="slot-lesson none">No lesson plan for this day</p>' : ''}
+      ${x.lessons.map(l => `<button class="lesson-chip" type="button" data-lesson="${esc(l.id)}" aria-label="Lesson plan: ${esc(l.title)}, ${esc(LESSON_LABEL[l.status])}. Open">${lessonLine(l)}</button>`).join('')}
+      ${x.lessons.length ? '' : `<p class="slot-lesson none">No lesson plan <button class="btn chip" type="button" data-act="plan" data-class="${esc(c.id)}" aria-label="Plan a lesson for ${esc(c.name)}">Plan a lesson</button></p>`}
       ${c.notes ? `<p class="slot-notes">${esc(c.notes)}</p>` : ''}
     </div>
   </li>`;
@@ -194,7 +198,7 @@ function attentionPanel(a, data) {
   const hasWork = data.lessons.length || data.assignments.length || data.tasks.length;
   const head = '<div class="panel-head"><h2>Needs attention</h2></div>';
   if (!hasWork) {
-    return `<div class="panel attention">${head}<div class="panel-body"><p class="note">Lesson plans, assignments and tasks are coming in the next updates. Then what’s overdue or waiting to be graded shows here.</p></div></div>`;
+    return `<div class="panel attention">${head}<div class="panel-body"><p class="note">Nothing waiting. Assignments and tasks are coming in the next updates; then what’s overdue or waiting to be graded shows here too.</p></div></div>`;
   }
   const group = (title, list, item, cls = '') => list.length ? `<div class="att-group${cls}"><h3>${esc(title)} <span class="count">${list.length}</span></h3><ul>${more(list, item)}</ul></div>` : '';
   const task = t => `<li><b>${esc(t.title)}</b>${t.priority === 'high' ? ' <span class="status s-high">High</span>' : ''}<span class="muted"> · due <span class="mono">${esc(short(t.due))}</span></span></li>`;
@@ -219,10 +223,11 @@ function upcomingPanel(a, data) {
 function quickPanel(a) {
   return `<div class="panel quick"><div class="panel-head"><h2>Quick actions</h2></div><div class="panel-body stack">
     <div class="quick-btns">
+      <button class="btn" type="button" data-act="new-lesson">New lesson plan${a.isToday ? '' : ` for ${esc(short(a.date))}`}</button>
       <button class="btn" type="button" data-act="add-class">Add a class</button>
       <button class="btn" type="button" data-act="add-off">Add a day off${a.isToday ? '' : ` on ${esc(short(a.date))}`}</button>
       <a class="btn" href="#/classes">Classes & schedule</a>
     </div>
-    <p class="note small">Adding lesson plans, assignments and tasks comes with those sections.</p>
+    <p class="note small">Adding assignments and tasks comes with those sections.</p>
   </div></div>`;
 }

@@ -122,7 +122,7 @@ describe('every kind of record', () => {
   const samples = classId => ({
     classes: [sampleClass(), { subject: 'Chemistry' }],
     daysOff: [{ title: 'Winter break', start: '2026-12-21', end: '2027-01-01', kind: 'break' }, { title: 'In-service day' }],
-    lessons: [{ classId, date: '2026-10-27', title: 'Cells', objectives: 'Name 3 organelles', materials: 'Microscopes', notes: 'Lab B', status: 'ready' }, { classId, title: 'Atoms' }],
+    lessons: [{ classId, date: '2026-10-27', title: 'Cells', objectives: 'Name 3 organelles', materials: 'Microscopes', notes: 'Lab B', status: 'ready' }, { classId, date: '2026-10-28' }],  // no title
     assignments: [{ classId, title: 'Lab report', assigned: '2026-10-20', due: '2026-10-27', gradeBy: '2026-10-30', status: 'to-grade' }, { title: 'Quiz' }],
     tasks: [{ title: 'Copies', description: '30 copies', due: '2026-10-28', priority: 'high' }, { title: '', priority: 'high' }],
   });

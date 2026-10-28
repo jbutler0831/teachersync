@@ -92,7 +92,7 @@ describe('today’s classes', () => {
   });
 
   it('honest about what isn’t built yet', () => {
-    expect($('.attention').textContent).toMatch(/Lesson plans, assignments and tasks are coming/);
+    expect($('.attention').textContent).toMatch(/Assignments and tasks are coming/);
     expect($('.attention .count')).toBeNull();
     expect($('.upcoming')).toBeNull(); // nothing that could be coming up exists
     expect($('.quick').textContent).toMatch(/Add a class.*Add a day off.*Classes & schedule/s);
@@ -201,8 +201,8 @@ describe('workload, from the data that exists', () => {
   });
 
   it('shows each class’s lesson plan, overdue and due tasks, grading, and what’s coming up', () => {
-    expect($$('.slot')[1].textContent).toMatch(/Cells\s*Ready/);
-    expect($$('.slot')[0].textContent).toContain('No lesson plan for this day');
+    expect($$('.slot')[1].textContent).toMatch(/Cells\s*Planned/);
+    expect($$('.slot')[0].textContent).toMatch(/No lesson plan\s*Plan a lesson/);
     const att = words($('.attention'));
     expect(att).toMatch(/Overdue tasks 1 Overdue copies · due Fri, Nov 20/);
     expect(att).toMatch(/Tasks due today 1 Email office High/);
