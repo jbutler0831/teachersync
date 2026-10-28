@@ -157,7 +157,24 @@ Each event has a stable `UID` (for example `due-<assignment id>@teachersync.app`
 - **Exporting data from a newer version loses that version's new fields.** If this copy opens data saved by a newer TeacherSync (it's then read-only), Export backup writes what this version understands, so fields only the newer version knows are left out of the file. The data on the device is unaffected, and restore is blocked in that state. Fix later by exporting the newer data unchanged; deliberately left alone for now (no risky changes to backups).
 - **Restore doesn't enforce the per-type limits** (for example 60 classes); only device storage limits it, and a restore that doesn't fit changes nothing.
 - **Weekly schedules only.** A/B and rotating days aren't implemented (planned as a new `settings.schedule.kind`).
+- **The Windows installer hasn't been run on Windows** (it was built and inspected on a Mac only). The Mac builds were launched and checked on Apple Silicon, the Intel one through Rosetta, not on an Intel Mac.
 - **Not yet tested on real devices or other browsers.** Automated checks run in jsdom and headless Chrome only (layout checks compare the page with the device width at 320, 390, 768 and 1280px, including very long words and pasted links); Safari (iPhone, iPad, Mac), Firefox and Android Chrome still need testing by hand, including installing the app and the date and time pickers.
+
+## Desktop app (Mac and Windows)
+
+The same app runs in its own window through Electron (`desktop/main.cjs`). It's sandboxed with no Node.js access, serves its files from `app://teachersync` behind a path guard and a strict content security policy, opens web links in the browser, refuses permission requests (camera, location…), and has no developer tools in its menus. The web app's offline worker isn't used: every file is already on disk.
+
+```bash
+npm run desktop     # build, then open the desktop app
+npm run dist:mac    # .dmg for Intel (x64) and Apple Silicon (arm64)
+npm run dist:win    # Windows installer (64-bit, NSIS), built on a Mac without Wine
+```
+
+Installers are written to `release/` (not committed). **If the project is in an iCloud-synced folder** (Desktop or Documents), macOS can't sign the app there; build to a local folder instead, for example `npx electron-builder --mac -c.directories.output="$HOME/Library/Caches/TeacherSync-build"`.
+
+- **Data** is saved per computer: `~/Library/Application Support/TeacherSync` on a Mac, `%APPDATA%\TeacherSync` on Windows. It's separate from the web app's; use Settings → Export backup and Restore to move it.
+- **Signing:** the Mac apps are ad-hoc signed, not notarized, so a downloaded copy opens the first time with right-click → Open (or System Settings → Privacy & Security → Open Anyway). The Windows installer is unsigned, so SmartScreen asks first (More info → Run anyway). Removing these prompts needs an Apple Developer ID and a Windows code-signing certificate.
+- On an Apple Silicon Mac, the Intel build runs through Rosetta; its first launch takes noticeably longer while Rosetta translates it.
 
 ## Relationship to SemesterSync
 

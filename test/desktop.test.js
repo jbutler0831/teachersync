@@ -72,15 +72,20 @@ describe('security', () => {
     expect(main).toMatch(/contextIsolation: true, nodeIntegration: false, sandbox: true/);
     expect(main).toMatch(/setPermissionRequestHandler\([^)]*\) => callback\(false\)\)/);
     expect(main).not.toMatch(/preload|enableRemoteModule|webSecurity: false|toggleDevTools/);
+    expect(main).toContain("process.platform === 'darwin' ? { role: 'appMenu' } : { role: 'fileMenu' }"); // Quit on Windows too
   });
 });
 
 describe('packaging', () => {
-  it('builds a universal Mac .dmg from the web build, with the app’s icon', () => {
+  it('builds Mac .dmg files for Intel and Apple Silicon, and a Windows installer, from the web build', () => {
     expect(pkg.main).toBe('desktop/main.cjs');
     expect(existsSync(new URL('../desktop/main.cjs', import.meta.url))).toBe(true);
     expect(pkg.build.files).toEqual(['dist/**/*', 'desktop/main.cjs', 'desktop/lib.cjs', 'package.json']);
-    expect(pkg.build.mac.target).toEqual([{ target: 'dmg', arch: ['universal'] }]);
+    expect(pkg.build.mac.target).toEqual([{ target: 'dmg', arch: ['x64', 'arm64'] }]);
+    expect(pkg.build.mac.identity).toBe('-');                       // ad-hoc signed, so a downloaded copy isn't "damaged"
+    expect(pkg.build.dmg.artifactName).toBe('TeacherSync-${version}-mac-${arch}.${ext}');
+    expect(pkg.build.win.target).toEqual([{ target: 'nsis', arch: ['x64'] }]);
+    expect(pkg.build.nsis).toMatchObject({ oneClick: false, perMachine: false, artifactName: 'TeacherSync-Setup-${version}.${ext}' });
     expect(pkg.build.directories.output).toBe('release');
     const icon = readFileSync(new URL('../desktop/icon.png', import.meta.url));
     expect([icon.readUInt32BE(16), icon.readUInt32BE(20)]).toEqual([1024, 1024]);

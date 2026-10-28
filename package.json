@@ -2,7 +2,7 @@
   "name": "teachersync",
   "productName": "TeacherSync",
   "version": "0.1.0",
-  "description": "Plan classes, lessons, assignments, grading and daily tasks in one place. A desktop app for Mac, and an installable web app for phones and computers.",
+  "description": "Plan classes, lessons, assignments, grading and daily tasks in one place. A desktop app for Mac and Windows, and an installable web app for phones and computers.",
   "author": "Jorel Butler",
   "license": "MIT",
   "private": true,
@@ -17,7 +17,9 @@
     "test:watch": "vitest",
     "check": "vitest run && vite build",
     "desktop": "vite build && electron .",
-    "dist:mac": "node scripts/make-icons.js && vite build && electron-builder --mac"
+    "dist:mac": "node scripts/make-icons.js && vite build && electron-builder --mac",
+    "dist:win": "node scripts/make-icons.js && vite build && electron-builder --win",
+    "dist": "node scripts/make-icons.js && vite build && electron-builder --mac --win"
   },
   "devDependencies": {
     "@fontsource-variable/bricolage-grotesque": "5.3.0",
@@ -51,14 +53,33 @@
         {
           "target": "dmg",
           "arch": [
-            "universal"
+            "x64",
+            "arm64"
           ]
         }
       ]
     },
     "dmg": {
       "title": "TeacherSync ${version}",
-      "artifactName": "TeacherSync-${version}-universal.${ext}"
+      "artifactName": "TeacherSync-${version}-mac-${arch}.${ext}"
+    },
+    "win": {
+      "icon": "desktop/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "TeacherSync",
+      "artifactName": "TeacherSync-Setup-${version}.${ext}"
     }
   }
 }

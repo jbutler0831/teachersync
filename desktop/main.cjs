@@ -1,7 +1,8 @@
 // TeacherSync for the desktop: the same app as the web build (dist/), in its own window.
 // Electron runs it sandboxed with no Node.js access; files come from inside the app (app://teachersync),
 // web links open in the browser, and permission requests (camera, location, …) are refused.
-// Data is saved where Electron keeps it: ~/Library/Application Support/TeacherSync.
+// Data is saved where Electron keeps it: ~/Library/Application Support/TeacherSync on a Mac,
+// %APPDATA%\TeacherSync on Windows.
 const { app, BrowserWindow, Menu, nativeTheme, protocol, session, shell } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -47,10 +48,10 @@ function serveFiles() {
   });
 }
 
-// File menu items aren't needed; Edit (copy, paste, undo), zoom and the window list are.
+// Edit (copy, paste, undo), zoom and the window list. On a Mac the app menu holds Quit; on Windows a File menu does.
 function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    { role: 'appMenu' },
+    process.platform === 'darwin' ? { role: 'appMenu' } : { role: 'fileMenu' },
     { role: 'editMenu' },
     { label: 'View', submenu: [{ role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }] },
     { role: 'windowMenu' },
