@@ -52,10 +52,10 @@ h1:focus { outline: none; }
 .btn.primary.danger { background: var(--crit); border-color: var(--crit); color: #fff; }
 
 /* Dialogs */
-dialog.sheet { border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(480px, calc(100vw - 32px)); background: var(--surface); color: var(--ink); box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .45); }
+dialog.sheet { overflow-wrap: break-word; border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(480px, calc(100vw - 32px)); background: var(--surface); color: var(--ink); box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .45); }
 dialog.sheet::backdrop { background: rgba(11, 16, 23, .45); backdrop-filter: blur(2px); }
 dialog.sheet form { display: grid; gap: 16px; padding: 22px; }
-dialog.sheet h2 { font: 700 20px/1.2 var(--f-display); margin: 0; }
+dialog.sheet h2 { font: 700 20px/1.2 var(--f-display); margin: 0; overflow-wrap: anywhere; }
 .sheet-body { color: var(--muted); display: grid; gap: 10px; }
 .sheet-body p { margin: 0; }
 .sheet-body strong { color: var(--ink); }

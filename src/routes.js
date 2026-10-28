@@ -4,7 +4,8 @@ import * as today from './views/today.js';
 import * as settings from './views/settings.js';
 import * as classes from './views/classes.js';
 import * as lessons from './views/lessons.js';
-import { week, assignments, tasks } from './views/sections.js';
+import * as assignments from './views/assignments.js';
+import { week, tasks } from './views/sections.js';
 
 export const ROUTES = [
   { id: 'today', label: 'Today', icon: 'today', tab: true, view: today },

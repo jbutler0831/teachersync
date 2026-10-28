@@ -12,6 +12,7 @@ export const COLLECTIONS = ['classes', 'daysOff', 'lessons', 'assignments', 'tas
 export const CLASS_COLORS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'];
 // 'ready' is shown as Planned: ready for its date. The stored keys stay as they were, so saved data and backups still match.
 export const LESSON_STATUS = [['draft', 'Draft'], ['ready', 'Planned'], ['taught', 'Taught']];
+// Assigned: given out, not collected yet. To grade: collected, waiting to be graded. Graded. Returned: handed back.
 export const ASSIGNMENT_STATUS = [['assigned', 'Assigned'], ['to-grade', 'To grade'], ['graded', 'Graded'], ['returned', 'Returned']];
 export const TASK_PRIORITY = [['low', 'Low'], ['normal', 'Normal'], ['high', 'High']];
 export const DAY_OFF_KINDS = [['holiday', 'Holiday'], ['break', 'Break'], ['other', 'Other']];
@@ -89,6 +90,8 @@ export const TYPES = {
       due: date(),
       gradeBy: date(),
       status: oneOf(keys(ASSIGNMENT_STATUS), 'assigned'),
+      description: text(5000, { multiline: true }),  // instructions, as given to the class
+      notes: text(2000, { multiline: true }),
     },
     // A new assignment's grading deadline defaults to the due date plus the days set in Settings.
     // If the due date moves and the deadline was still that default, it moves with it.

@@ -13,18 +13,6 @@ export const week = placeholder({
   },
 });
 
-export const assignments = placeholder({
-  eyebrow: 'Grading',
-  title: 'Assignments',
-  lede: 'Track what’s due, what’s waiting to be graded and what’s been handed back.',
-  empty: {
-    icon: 'assignments',
-    heading: 'No assignments yet',
-    body: 'Add an assignment with its due date and TeacherSync suggests a “grade by” date.',
-    points: ['Assigned → To grade → Graded → Returned', 'A grading queue sorted by what’s most urgent', 'No student names or scores are stored'],
-  },
-});
-
 export const tasks = placeholder({
   eyebrow: 'To do',
   title: 'Tasks',

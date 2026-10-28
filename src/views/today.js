@@ -10,6 +10,7 @@ import { esc } from '../lib/dom.js';
 import { ICONS } from '../lib/icons.js';
 import { classForm, dayOffForm } from './classes.js';
 import { lessonForm, openLesson } from './lessons.js';
+import { assignmentForm, openAssignment, showAssignmentsView } from './assignments.js';
 
 const TICK_MS = 30000;
 const SHOW = 5; // items per list before "and N more"
@@ -66,6 +67,9 @@ export function render(container) {
     else if (b.dataset.act === 'new-lesson') lessonForm({ initial: { date: state.selected } });
     else if (b.dataset.act === 'plan') lessonForm({ initial: { classId: b.dataset.class, date: state.selected } });
     else if (b.dataset.lesson) openLesson(b.dataset.lesson);
+    else if (b.dataset.assignment) openAssignment(b.dataset.assignment);
+    else if (b.dataset.act === 'new-assignment') assignmentForm({ initial: { assigned: state.selected } });
+    else if (b.dataset.act === 'see-grading') showAssignmentsView('attention');
   });
   el.addEventListener('change', e => {
     if (e.target.dataset.day === 'pick' && isIsoDate(e.target.value)) show(e.target.value);
@@ -88,7 +92,7 @@ export function render(container) {
 }
 
 // What the clock can change on screen: the day, and which class is done, on now, or next.
-const keyOf = (a, s) => `${s.today}|${s.selected}|${a.schedule.map(x => x.when).join()}|${a.toGrade.map(x => x.late).join()}`;
+const keyOf = (a, s) => `${s.today}|${s.selected}|${a.schedule.map(x => x.when).join()}|${a.toGrade.map(x => x.late).join()}|${a.pastDue.length}`;
 
 /** "3 classes, next up Biology 1 at 10:00 AM. 2 to grade." */
 function summary(a, data) {
@@ -107,6 +111,8 @@ function summary(a, data) {
   const work = [
     a.overdue.length && plural(a.overdue.length, 'overdue task', 'overdue tasks'),
     a.tasksDue.length && plural(a.tasksDue.length, 'task due', 'tasks due'),
+    a.pastDue.length && `${a.pastDue.length} past due`,
+    a.dueOn.length && `${a.dueOn.length} due`,
     a.toGrade.length && `${a.toGrade.length} to grade`,
   ].filter(Boolean);
   if (work.length) parts.push(`${work.join(', ').replace(/^./, c => c.toUpperCase())}.`);
@@ -198,15 +204,24 @@ function attentionPanel(a, data) {
   const hasWork = data.lessons.length || data.assignments.length || data.tasks.length;
   const head = '<div class="panel-head"><h2>Needs attention</h2></div>';
   if (!hasWork) {
-    return `<div class="panel attention">${head}<div class="panel-body"><p class="note">Nothing waiting. Assignments and tasks are coming in the next updates; then what’s overdue or waiting to be graded shows here too.</p></div></div>`;
+    return `<div class="panel attention">${head}<div class="panel-body"><p class="note">Nothing waiting. Add assignments to see what’s due and what needs grading here. Tasks are coming in the next update.</p></div></div>`;
   }
-  const group = (title, list, item, cls = '') => list.length ? `<div class="att-group${cls}"><h3>${esc(title)} <span class="count">${list.length}</span></h3><ul>${more(list, item)}</ul></div>` : '';
+  const group = (title, list, item, cls = '', extra = '') => list.length ? `<div class="att-group${cls}"><h3>${title} <span class="count">${list.length}</span></h3><ul>${more(list, item)}</ul>${extra}</div>` : '';
   const task = t => `<li><b>${esc(t.title)}</b>${t.priority === 'high' ? ' <span class="status s-high">High</span>' : ''}<span class="muted"> · due <span class="mono">${esc(short(t.due))}</span></span></li>`;
-  const grade = x => `<li><b>${esc(x.assignment.title)}</b><span class="muted">${x.class ? ` · ${esc(x.class.name)}` : ''}${x.assignment.gradeBy ? ` · grade by <span class="mono">${esc(short(x.assignment.gradeBy))}</span>` : ''}</span>${x.late ? ' <span class="status s-late">Late</span>' : ''}</li>`;
+  // An assignment that opens when tapped: its title, class and a date (`meta`), then any warning (`flag`).
+  const asg = (x, meta = '', flag = '') => `<li><button class="lesson-chip" type="button" data-assignment="${esc(x.assignment.id)}">
+    <b>${esc(x.assignment.title)}</b><span class="muted">${x.class ? ` · ${esc(x.class.name)}` : ''}${meta}</span>${flag}</button></li>`;
+  const grade = x => asg(x, x.assignment.gradeBy ? ` · grade by <span class="mono">${esc(short(x.assignment.gradeBy))}</span>` : '',
+    x.late ? ' <span class="status s-late">Late</span>' : '');
+  const pastDue = x => asg(x, ` · was due <span class="mono">${esc(short(x.assignment.due))}</span>`, ' <span class="status s-late">Past due</span>');
   const groups = [
     group('Overdue tasks', a.overdue, task, ' crit'),
     group(a.isToday ? 'Tasks due today' : 'Tasks due this day', a.tasksDue, task),
-    group('To grade', a.toGrade, grade),
+    group('Past due, not collected', a.pastDue, pastDue, ' crit'),
+    group(a.isToday ? 'Assignments due today' : 'Assignments due this day', a.dueOn, x => asg(x, '')),
+    // The grading pile is what's waiting now, not tied to the day shown; it says so on other days.
+    group(`To grade${a.isToday ? '' : ' <span class="muted small">· now, all classes</span>'}`, a.toGrade, grade, '',
+      '<button class="btn chip see-all" type="button" data-act="see-grading">See all in Assignments</button>'),
     a.draftLessons ? `<p class="note small">${plural(a.draftLessons, 'lesson plan', 'lesson plans')} for ${a.isToday ? 'today' : 'this day'} ${a.draftLessons === 1 ? 'is' : 'are'} still a draft.</p>` : '',
   ].filter(Boolean);
   return `<div class="panel attention">${head}<div class="panel-body stack">${groups.length ? groups.join('') : `<p class="note">Nothing overdue or waiting to be graded${a.isToday ? '' : ' for this day'}.</p>`}</div></div>`;
@@ -214,7 +229,9 @@ function attentionPanel(a, data) {
 
 function upcomingPanel(a, data) {
   if (!data.assignments.length && !data.tasks.length && !data.daysOff.length) return '';
-  const item = u => `<li><span class="mono when">${esc(short(u.date))}</span> <span class="kind k-${u.kind}">${UPCOMING_LABEL[u.kind]}</span> <b>${esc(u.title)}</b>${u.class ? `<span class="muted"> · ${esc(u.class.name)}</span>` : ''}</li>`;
+  const label = u => `<span class="mono when">${esc(short(u.date))}</span> <span class="kind k-${u.kind}">${UPCOMING_LABEL[u.kind]}</span> <b>${esc(u.title)}</b>${u.class ? `<span class="muted"> · ${esc(u.class.name)}</span>` : ''}`;
+  const item = u => (u.kind === 'due' || u.kind === 'grade')
+    ? `<li><button class="up-open" type="button" data-assignment="${esc(u.id)}">${label(u)}</button></li>` : `<li>${label(u)}</li>`;
   return `<div class="panel upcoming"><div class="panel-head"><h2>Next ${UPCOMING_DAYS} days</h2></div><div class="panel-body">
     ${a.upcoming.length ? `<ul class="up-list">${more(a.upcoming, item)}</ul>` : `<p class="note">Nothing due and no days off in the ${UPCOMING_DAYS} days after ${a.isToday ? 'today' : 'this day'}.</p>`}
   </div></div>`;
@@ -224,10 +241,11 @@ function quickPanel(a) {
   return `<div class="panel quick"><div class="panel-head"><h2>Quick actions</h2></div><div class="panel-body stack">
     <div class="quick-btns">
       <button class="btn" type="button" data-act="new-lesson">New lesson plan${a.isToday ? '' : ` for ${esc(short(a.date))}`}</button>
+      <button class="btn" type="button" data-act="new-assignment">New assignment</button>
       <button class="btn" type="button" data-act="add-class">Add a class</button>
       <button class="btn" type="button" data-act="add-off">Add a day off${a.isToday ? '' : ` on ${esc(short(a.date))}`}</button>
       <a class="btn" href="#/classes">Classes & schedule</a>
     </div>
-    <p class="note small">Adding assignments and tasks comes with those sections.</p>
+    <p class="note small">Adding tasks comes with the Tasks section.</p>
   </div></div>`;
 }

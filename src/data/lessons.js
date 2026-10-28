@@ -2,20 +2,13 @@
 // Works on the store's records; nothing here saves anything.
 import { meetingsOn } from './schedule.js';
 import { addDays, fromIso, iso } from '../lib/dates.js';
+import { matchesText } from './search.js';
 
 export const WHEN = [['upcoming', 'Upcoming'], ['past', 'Past'], ['undated', 'No date'], ['all', 'All dates'], ['day', 'On a date']];
 const TEXT_FIELDS = ['title', 'objectives', 'activities', 'materials', 'assessment', 'notes'];
 
-// Lowercase without accents, so "resume" finds "Résumé".
-const fold = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-
 /** True when every word of the query appears somewhere in the plan (its text fields or its class's name). */
-export function matches(lesson, query, className = '') {
-  const words = fold(query).split(/\s+/).filter(Boolean);
-  if (!words.length) return true;
-  const hay = fold([...TEXT_FIELDS.map(f => lesson[f]), className].join('\n'));
-  return words.every(w => hay.includes(w));
-}
+export const matches = (lesson, query, className = '') => matchesText([...TEXT_FIELDS.map(f => lesson[f]), className], query);
 
 /**
  * Filters lesson plans. `filters`: { query, classId ('' for all, 'missing' for plans whose class is gone),

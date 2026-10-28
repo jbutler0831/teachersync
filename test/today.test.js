@@ -92,7 +92,7 @@ describe('today’s classes', () => {
   });
 
   it('honest about what isn’t built yet', () => {
-    expect($('.attention').textContent).toMatch(/Assignments and tasks are coming/);
+    expect($('.attention').textContent).toMatch(/Add assignments to see.*Tasks are coming/s);
     expect($('.attention .count')).toBeNull();
     expect($('.upcoming')).toBeNull(); // nothing that could be coming up exists
     expect($('.quick').textContent).toMatch(/Add a class.*Add a day off.*Classes & schedule/s);
@@ -219,7 +219,7 @@ describe('workload, from the data that exists', () => {
     const att = words($('.attention'));
     expect(att).not.toContain('Overdue');
     expect(att).toMatch(/Tasks due this day 1 Tomorrow task/);
-    expect(att).toMatch(/To grade 1/);
+    expect(att).toMatch(/To grade · now, all classes 1/);
     expect(att).toMatch(/1 lesson plan for this day is still a draft/);
     // Biology doesn't meet on Tuesdays, so its lesson plan is listed on its own.
     expect($('.other-lessons').textContent).toMatch(/Planned on a Tuesday\s*Draft\s*· Biology 1/);

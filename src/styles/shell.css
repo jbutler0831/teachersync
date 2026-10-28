@@ -31,7 +31,8 @@
 
 /* Content */
 .content { min-width: 0; padding: 32px 32px 64px; }
-.view { max-width: 1040px; margin: 0 auto; display: grid; gap: 24px; }
+/* minmax and break-word: a long word or pasted link wraps instead of widening the page. */
+.view { max-width: 1040px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; overflow-wrap: break-word; }
 .view-head { display: grid; gap: 8px; }
 .view-head h1 { font: 800 clamp(28px, 4vw, 40px)/1.05 var(--f-display); letter-spacing: -.025em; margin: 0; text-wrap: balance; }
 .view-head h1 mark { background: linear-gradient(transparent 55%, var(--hl) 55%, var(--hl) 92%, transparent 92%); color: inherit; padding: 0 .06em; }

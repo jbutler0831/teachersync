@@ -2,7 +2,7 @@
 
 Plan classes, lessons, assignments, grading and daily tasks in one place. A web app that installs on phones and computers (a PWA) and works offline. Everything is saved on the device; there are no accounts, no student records and no AI features in version 1.
 
-**Status:** Phases 1–5 of the MVP: the app shell, navigation, themes and offline install; the data layer (classes, days off, lesson plans, assignments, tasks, settings) with backup and restore in Settings; Classes & schedule (classes, weekly meeting times, days off, a dated week); the Today dashboard; and Lesson plans. Assignments, Tasks and Week are still empty, so assignments and tasks can't be added yet (only restored from a backup).
+**Status:** Phases 1–6 of the MVP: the app shell, navigation, themes and offline install; the data layer (classes, days off, lesson plans, assignments, tasks, settings) with backup and restore in Settings; Classes & schedule (classes, weekly meeting times, days off, a dated week); the Today dashboard; Lesson plans; and Assignments & grading. Tasks and Week are still empty, so tasks can't be added yet (only restored from a backup).
 
 ## Run it
 
@@ -26,7 +26,7 @@ To try it on a phone, run `npm run dev -- --host` and open the address it prints
 | `src/routes.js` | Every section, its icon, and whether it's in the phone tab bar |
 | `src/router.js` | Hash addresses (`#/today`, `#/lessons`, …), which work on any static host |
 | `src/shell.js` | Sidebar (computers), top bar, tab bar (phones), and showing a section |
-| `src/views/` | One file per section (`classes.js`: Classes & schedule, `lessons.js`: Lesson plans); `sections.js` holds the ones that are still empty |
+| `src/views/` | One file per section (`classes.js`: Classes & schedule, `lessons.js`: Lesson plans, `assignments.js`: Assignments); `sections.js` holds the ones that are still empty |
 | `src/data/` | The data layer (see below) |
 | `src/lib/` | Small shared helpers: storage, theme, dates, toast, dialog, files, HTML escaping, icons |
 | `src/styles/` | `tokens.css` (colors, fonts, light and dark), `base.css` (buttons, panels…), `shell.css` (layout), `views.css` (section pages and form sheets) |
@@ -49,6 +49,8 @@ Everything is saved in this browser's `localStorage`. Nothing is sent anywhere, 
 | `src/data/schedule.js` | Which classes meet on a date (weekly schedules, skipping days off), overlapping meeting times, a week's dates |
 | `src/data/agenda.js` | What one day holds, for Today: classes with their lesson plans, overdue and due tasks, grading, the next 7 days |
 | `src/data/lessons.js` | Finding lesson plans: search, filters, date groups, a class's next meeting dates, copies |
+| `src/data/assignments.js` | Assignment status rules (past due, late, needs attention) and the list's views, filters and sorting |
+| `src/data/search.js` | Text search shared by Lesson plans and Assignments |
 | `src/data/index.js` | The app's store, and reloading it when another tab saves a change |
 
 **Keys:** `tsync-classes`, `tsync-days-off`, `tsync-lessons`, `tsync-assignments`, `tsync-tasks`, `tsync-settings`, `tsync-meta` (schema version), `tsync-snapshots` (safety copies) and `tsync-damaged` (originals of anything that couldn't be read). Every key starts with `tsync-` (`src/lib/storage.js`), so TeacherSync never reads or overwrites SemesterSync's `ssync-` data or anything else.
@@ -91,12 +93,29 @@ All of it is computed by `src/data/agenda.js` from the store with the same rules
 
 **Data model (Phase 5):** two optional text fields, `activities` and `assessment`, were added to lesson plans, and their `date` became optional. Both changes are backward compatible: plans and backups saved before load unchanged (the new fields read as empty, and they aren't rewritten just to add them), so no migration or schema version change was needed.
 
+## Assignments & grading
+
+- An assignment needs a **title** and a **class**. Everything else is optional: assigned date (filled with today for a new one), due date, grading deadline, instructions, notes. There are no fields for student names, submissions or scores.
+- The **grading deadline** fills in as the due date plus the days in Settings, and follows the due date until the teacher changes it. It can't be before the due date, and the due date can't be before the assigned date.
+- **Statuses** (unchanged since Phase 2): *Assigned* (given out, not collected), *To grade* (collected, waiting to be graded), *Graded*, *Returned* (handed back). Each list item has a button for the next step; the view sheet can also go back (Graded or Returned → To grade, To grade → Assigned). Status changes offer Undo.
+- **Status rules** (`src/data/assignments.js`, used by both Assignments and Today):
+  - *Past due*: still Assigned after its due date. Not on the due date itself, and not without a due date.
+  - *Late*: To grade after its grading deadline. Not on the deadline itself, not without one, and never once Graded or Returned.
+  - *Needs attention*: past due or To grade.
+  - Dates are calendar days compared with the teacher's own today, so time zones don't move them.
+- **The list** has four views with counts: *Needs attention* (default; late first, then past due, then To grade by deadline), *Upcoming* (Assigned and not past due; soonest due first, no due date last), *Graded* (Graded and Returned) and *All* (most recent due date first). Search covers title, instructions, notes and class name; filters cover class, status and due date (today, next 7 days, passed, none). Status is always written out (Late, Past due, To grade…), never shown by color alone.
+- **Delete** asks first, removes only that assignment, and offers Undo. Deleting a class still removes its assignments after a safety copy, as before.
+- **Today** shows, with each assignment in one group only: *Past due, not collected* (on today only), *Assignments due today* (or *this day*), and *To grade*, which is the current pile whatever day is shown and is labelled *now, all classes* on other days. Items open the assignment; *See all in Assignments* opens the Needs attention list. Due dates and grading deadlines in the next 7 days open too. Quick actions include *New assignment*.
+- **Classes** shows each class's number of assignments and how many are waiting to be graded, linking to that class's list, and an *Add assignment* button.
+
+**Data model (Phase 6):** two optional text fields, `description` (instructions) and `notes`, were added to assignments. Assignments and backups saved before load unchanged and aren't rewritten; no migration or schema version change.
+
 ## Known issues
 
 - **Exporting data from a newer version loses that version's new fields.** If this copy opens data saved by a newer TeacherSync (it's then read-only), Export backup writes what this version understands, so fields only the newer version knows are left out of the file. The data on the device is unaffected, and restore is blocked in that state. Fix later by exporting the newer data unchanged; deliberately left alone for now (no risky changes to backups).
 - **Restore doesn't enforce the per-type limits** (for example 60 classes); only device storage limits it, and a restore that doesn't fit changes nothing.
 - **Weekly schedules only.** A/B and rotating days aren't implemented (planned as a new `settings.schedule.kind`).
-- **Not yet tested on real devices or other browsers.** Automated checks run in jsdom and headless Chrome only; Safari (iPhone, iPad, Mac), Firefox and Android Chrome still need testing by hand, including installing the app and the date and time pickers.
+- **Not yet tested on real devices or other browsers.** Automated checks run in jsdom and headless Chrome only (layout checks compare the page with the device width at 320, 390, 768 and 1280px, including very long words and pasted links); Safari (iPhone, iPad, Mac), Firefox and Android Chrome still need testing by hand, including installing the app and the date and time pickers.
 
 ## Relationship to SemesterSync
 

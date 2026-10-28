@@ -1,8 +1,9 @@
 // What one day holds, for Today: the classes that meet (with that day's lesson plans), what needs attention,
 // and what's coming up. Built from the store's data with schedule.js's rules, so Today never keeps its own copy.
-// Only explicit statuses count: an assignment is waiting to be graded when its status is "To grade", a task is
-// open until it's marked done.
+// Only explicit statuses count: assignments follow assignments.js (past due, To grade, late), a task is open until
+// it's marked done. Each assignment appears in at most one of dueOn, pastDue and toGrade.
 import { meetingsOn, dayOffOn } from './schedule.js';
+import { isLate, isPastDue } from './assignments.js';
 import { addDays, fromIso, iso } from '../lib/dates.js';
 
 export const UPCOMING_DAYS = 7;
@@ -33,19 +34,25 @@ export function dayAgenda(date, data, { today = date, now = null } = {}) {
   const otherLessons = dayLessons.filter(l => !placed.has(l.id)).map(lesson => ({ lesson, class: classById.get(lesson.classId) || null }));
 
   const open = tasks.filter(t => !t.done && t.due);
+  const withClass = assignment => ({ assignment, class: classById.get(assignment.classId) || null });
+  // The grading pile is what's waiting now, whatever day is shown; late is measured from the real today.
   const toGrade = assignments
     .filter(a => a.status === 'to-grade')
     .sort((a, b) => (a.gradeBy || '9999').localeCompare(b.gradeBy || '9999') || a.title.localeCompare(b.title))
-    .map(assignment => ({ assignment, class: classById.get(assignment.classId) || null, late: !!assignment.gradeBy && assignment.gradeBy < today }));
+    .map(a => ({ ...withClass(a), late: isLate(a, today) }));
+  // Due on the shown day and not collected yet (ones already To grade are in toGrade).
+  const dueOn = assignments.filter(a => a.status === 'assigned' && a.due === date).sort((a, b) => a.title.localeCompare(b.title)).map(withClass);
+  // Past their due date and still Assigned: only on today, like overdue tasks.
+  const pastDue = isToday ? assignments.filter(a => isPastDue(a, today)).sort((a, b) => a.due.localeCompare(b.due) || a.title.localeCompare(b.title)).map(withClass) : [];
 
   // The next UPCOMING_DAYS days after this one.
   const end = after(date, UPCOMING_DAYS);
   const soon = d => d && d > date && d <= end;
   const upcoming = [
-    ...assignments.filter(a => a.status === 'assigned' && soon(a.due)).map(a => ({ date: a.due, kind: 'due', title: a.title, class: classById.get(a.classId) || null })),
-    ...assignments.filter(a => a.status === 'to-grade' && soon(a.gradeBy)).map(a => ({ date: a.gradeBy, kind: 'grade', title: a.title, class: classById.get(a.classId) || null })),
-    ...open.filter(t => soon(t.due)).map(t => ({ date: t.due, kind: 'task', title: t.title, class: null })),
-    ...daysOff.filter(d => soon(d.start)).map(d => ({ date: d.start, kind: 'off', title: d.title, class: null })),
+    ...assignments.filter(a => a.status === 'assigned' && soon(a.due)).map(a => ({ id: a.id, date: a.due, kind: 'due', title: a.title, class: classById.get(a.classId) || null })),
+    ...assignments.filter(a => a.status === 'to-grade' && soon(a.gradeBy)).map(a => ({ id: a.id, date: a.gradeBy, kind: 'grade', title: a.title, class: classById.get(a.classId) || null })),
+    ...open.filter(t => soon(t.due)).map(t => ({ id: t.id, date: t.due, kind: 'task', title: t.title, class: null })),
+    ...daysOff.filter(d => soon(d.start)).map(d => ({ id: d.id, date: d.start, kind: 'off', title: d.title, class: null })),
   ].sort((a, b) => a.date.localeCompare(b.date) || a.kind.localeCompare(b.kind) || a.title.localeCompare(b.title));
 
   return {
@@ -60,6 +67,8 @@ export function dayAgenda(date, data, { today = date, now = null } = {}) {
     tasksDue: open.filter(t => t.due === date).sort(byPriority),
     overdue: isToday ? open.filter(t => t.due < today).sort((a, b) => a.due.localeCompare(b.due) || byPriority(a, b)) : [],
     toGrade,
+    dueOn,
+    pastDue,
     upcoming,
   };
 }

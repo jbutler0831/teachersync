@@ -10,6 +10,7 @@ import { esc } from '../lib/dom.js';
 import { ICONS } from '../lib/icons.js';
 import { viewHead } from './placeholder.js';
 import { lessonForm, showLessonsFor, openLesson } from './lessons.js';
+import { assignmentForm, showAssignmentsFor } from './assignments.js';
 
 const KIND_LABEL = Object.fromEntries(DAY_OFF_KINDS);
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -59,6 +60,8 @@ export function render(container, now = new Date()) {
     else if (act === 'class-lessons') showLessonsFor(id);
     else if (act === 'plan-for') lessonForm({ initial: { classId: id } });
     else if (act === 'open-lesson') openLesson(id);
+    else if (act === 'class-assignments') showAssignmentsFor(id);
+    else if (act === 'add-assignment') assignmentForm({ initial: { classId: id } });
     else if (act === 'edit-off') { const d = store.get('daysOff', id); if (d) dayOffForm(d); }
     else if (act === 'delete-off') deleteDayOff(id);
     else if (act === 'week') {
@@ -112,6 +115,7 @@ function classItem(c, classes, ws, today) {
       ${clashNames.length ? `<p class="clash">Overlaps ${esc(clashNames.join(', '))}</p>` : ''}
       ${c.notes ? `<p class="class-notes">${esc(c.notes)}</p>` : ''}
       ${classLessons(c, today)}
+      ${classAssignments(c)}
     </div>
     <div class="row-btns">
       <button class="btn" type="button" data-act="edit-class" data-id="${esc(c.id)}" aria-label="Edit ${esc(c.name)}">Edit</button>
@@ -128,6 +132,17 @@ function classLessons(c, today) {
     ${mine.length ? `<button class="btn chip" type="button" data-act="class-lessons" data-id="${esc(c.id)}" aria-label="${esc(plural(mine.length, 'lesson plan', 'lesson plans'))} for ${esc(c.name)}">${esc(plural(mine.length, 'lesson plan', 'lesson plans'))}</button>` : '<span class="muted">No lesson plans yet</span>'}
     ${next ? `<span class="muted">Next:</span> <button class="btn chip" type="button" data-act="open-lesson" data-id="${esc(next.id)}"><b>${esc(next.title)}</b>&nbsp;<span class="mono">${esc(fmtDay(fromIso(next.date)))}</span></button>` : ''}
     <button class="btn chip" type="button" data-act="plan-for" data-id="${esc(c.id)}" aria-label="Plan a lesson for ${esc(c.name)}">Plan a lesson</button>
+  </div>`;
+}
+
+// The class's assignments: how many, how many wait to be graded, and a way to add one.
+function classAssignments(c) {
+  const mine = store.all('assignments').filter(a => a.classId === c.id);
+  const toGrade = mine.filter(a => a.status === 'to-grade').length;
+  const label = `${plural(mine.length, 'assignment', 'assignments')}${toGrade ? ` · ${toGrade} to grade` : ''}`;
+  return `<div class="class-lessons">
+    ${mine.length ? `<button class="btn chip" type="button" data-act="class-assignments" data-id="${esc(c.id)}" aria-label="${esc(label)}, ${esc(c.name)}">${esc(label)}</button>` : '<span class="muted">No assignments yet</span>'}
+    <button class="btn chip" type="button" data-act="add-assignment" data-id="${esc(c.id)}" aria-label="Add an assignment for ${esc(c.name)}">Add assignment</button>
   </div>`;
 }
 
