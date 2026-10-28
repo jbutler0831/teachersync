@@ -70,7 +70,7 @@ afterEach(() => { stop && stop(); vi.useRealTimers(); });
 describe('first visit', () => {
   it('Classes explains what to do and offers to add the first class; Today points there', () => {
     start('today');
-    expect($('#todayClasses').textContent).toContain('Start with your classes');
+    expect($('#view').textContent).toContain('Start with your classes');
     go('classes');
     expect($('h1').textContent).toBe('Classes & schedule');
     expect($('#classesPanel').textContent).toContain('No classes yet');
@@ -278,14 +278,15 @@ describe('days off and the schedule', () => {
   it('Today says when there are no classes because of a day off', () => {
     addDayOff({ title: 'Teacher workday', start: '2026-11-23' });
     go('today');
-    expect($('#todayClasses').textContent).toContain('No classes today: Teacher workday.');
+    expect($('.lede').textContent).toContain('No classes today: Teacher workday.');
+    expect($('.off-banner').textContent).toContain('No classes · Teacher workday');
   });
 
   it('Today lists today’s classes in order', () => {
     addClass({ name: 'Homeroom', rows: [{ days: [1], start: '07:30', end: '07:50' }] });
     go('today');
-    expect($$('.today-list li b').map(b => b.textContent)).toEqual(['Homeroom', 'Biology 1']);
-    expect($('.today-list').textContent).toContain('Room 204');
+    expect($$('.slot h3').map(h => h.textContent.replace(/\s*(Now|Next|\(finished\))\s*/g, ''))).toEqual(['Homeroom', 'Biology 1']);
+    expect($('.slots').textContent).toContain('Room 204');
   });
 
   it('a single day off: the last day can be left empty', () => {

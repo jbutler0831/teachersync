@@ -2,7 +2,7 @@
 
 Plan classes, lessons, assignments, grading and daily tasks in one place. A web app that installs on phones and computers (a PWA) and works offline. Everything is saved on the device; there are no accounts, no student records and no AI features in version 1.
 
-**Status:** Phases 1–3 of the MVP: the app shell, navigation, themes and offline install; the data layer (classes, days off, lesson plans, assignments, tasks, settings) with backup and restore in Settings; and Classes & schedule (classes, weekly meeting times, days off, a dated week, and today's classes on Today). Lessons, Assignments, Tasks and Week are still empty.
+**Status:** Phases 1–4 of the MVP: the app shell, navigation, themes and offline install; the data layer (classes, days off, lesson plans, assignments, tasks, settings) with backup and restore in Settings; Classes & schedule (classes, weekly meeting times, days off, a dated week); and the Today dashboard. Lessons, Assignments, Tasks and Week are still empty, so lesson plans, assignments and tasks can't be added yet (only restored from a backup).
 
 ## Run it
 
@@ -47,6 +47,7 @@ Everything is saved in this browser's `localStorage`. Nothing is sent anywhere, 
 | `src/data/store.js` | `createStore()`: load, create, update, remove (with Undo), settings, safety copies, restore. Storage, clock and ids can be swapped in tests |
 | `src/data/backup.js` | Backup files: make, read and check, merge |
 | `src/data/schedule.js` | Which classes meet on a date (weekly schedules, skipping days off), overlapping meeting times, a week's dates |
+| `src/data/agenda.js` | What one day holds, for Today: classes with their lesson plans, overdue and due tasks, grading, the next 7 days |
 | `src/data/index.js` | The app's store, and reloading it when another tab saves a change |
 
 **Keys:** `tsync-classes`, `tsync-days-off`, `tsync-lessons`, `tsync-assignments`, `tsync-tasks`, `tsync-settings`, `tsync-meta` (schema version), `tsync-snapshots` (safety copies) and `tsync-damaged` (originals of anything that couldn't be read). Every key starts with `tsync-` (`src/lib/storage.js`), so TeacherSync never reads or overwrites SemesterSync's `ssync-` data or anything else.
@@ -66,11 +67,23 @@ To change what's stored: edit the rules in `schema.js`, bump `SCHEMA_VERSION`, a
 - Days off are a single day or a range (at most a year, which catches a mistyped year). No class is shown as meeting on any of their days, on Today or in the Schedule week.
 - Deleting a class asks first, says how many lesson plans and assignments go with it, saves a safety copy, and offers Undo. Deleting a day off offers Undo.
 
+## Today
+
+The home screen answers what's on, what needs attention and what's next, for today or any other day.
+
+- **Classes** for the day in time order, with times, subject, room, notes and that day's lesson plan. On today, finished classes are dimmed and the current and next class are marked; this follows the clock while the app is open, including past midnight. On a day off, its name and dates, and when the next class is.
+- **Needs attention** and **Next 7 days** count only what's saved and use only explicit statuses: a task is open until marked done; an assignment is waiting to be graded when its status is *To grade*, and late once its grading deadline has passed. Overdue tasks are shown on today only. Until lesson plans, assignments and tasks have their own sections, this panel says so instead of showing zeros.
+- **Quick actions** open the same Add class and Add day off forms as Classes & schedule (the day off starts on the day shown). There are no actions for lesson plans, assignments or tasks yet, because those sections don't exist.
+- **Days:** previous and next, a date picker, and Back to today. Another day's heading says which day it is and how far from today ("In 2 days"); the year is shown when it isn't this year.
+
+All of it is computed by `src/data/agenda.js` from the store with the same rules as Classes & schedule (`schedule.js`); Today keeps no data of its own.
+
 ## Known issues
 
 - **Exporting data from a newer version loses that version's new fields.** If this copy opens data saved by a newer TeacherSync (it's then read-only), Export backup writes what this version understands, so fields only the newer version knows are left out of the file. The data on the device is unaffected, and restore is blocked in that state. Fix later by exporting the newer data unchanged; deliberately left alone for now (no risky changes to backups).
-- Restoring a backup doesn't apply the per-collection limits (for example 60 classes); only device storage limits it, and a restore that doesn't fit changes nothing.
-- Only weekly schedules exist. A/B and rotating days are planned (`settings.schedule.kind`).
+- **Restore doesn't enforce the per-type limits** (for example 60 classes); only device storage limits it, and a restore that doesn't fit changes nothing.
+- **Weekly schedules only.** A/B and rotating days aren't implemented (planned as a new `settings.schedule.kind`).
+- **Not yet tested on real devices or other browsers.** Automated checks run in jsdom and headless Chrome only; Safari (iPhone, iPad, Mac), Firefox and Android Chrome still need testing by hand, including installing the app and the date and time pickers.
 
 ## Relationship to SemesterSync
 

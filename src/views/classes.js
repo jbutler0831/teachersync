@@ -215,7 +215,8 @@ export function readMeetingRows(form, prev = []) {
   return rowErrors.length ? { rowErrors } : { meetings };
 }
 
-function classForm(prev = null) {
+/** Opens the Add class form, or Edit class with `prev`. Also used by Today. */
+export function classForm(prev = null) {
   const ws = store.settings().weekStartsOn;
   const color = prev ? prev.color : nextColor();
   const groups = prev ? groupMeetings(prev.meetings, ws) : [];
@@ -345,7 +346,8 @@ async function deleteClass(id) {
 
 /* ---------- Day off form ---------- */
 
-function dayOffForm(prev = null) {
+/** Opens the Add day off form (starting on `start`, if given), or Edit with `prev`. Also used by Today. */
+export function dayOffForm(prev = null, { start = '' } = {}) {
   const body = `
     <label class="field"><span>Name</span>
       <input class="field-in" name="title" maxlength="80" required autocomplete="off" placeholder="Thanksgiving break" value="${esc(prev ? prev.title : '')}">
@@ -354,7 +356,7 @@ function dayOffForm(prev = null) {
       <select class="field-in" name="kind">${DAY_OFF_KINDS.map(([v, label]) => `<option value="${v}"${(prev ? prev.kind : 'holiday') === v ? ' selected' : ''}>${label}</option>`).join('')}</select></label>
     <div class="field-pair">
       <label class="field"><span>First day</span>
-        <input class="field-in" type="date" name="start" required value="${esc(prev ? prev.start : '')}">
+        <input class="field-in" type="date" name="start" required value="${esc(prev ? prev.start : start)}">
         <small class="field-error" data-err="start" hidden></small></label>
       <label class="field"><span>Last day <i>optional</i></span>
         <input class="field-in" type="date" name="end" value="${esc(prev && prev.end !== prev.start ? prev.end : '')}">

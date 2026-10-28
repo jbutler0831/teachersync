@@ -1,4 +1,4 @@
-/* Section pages: Classes & schedule, Today's classes, and the form sheets. Colors come from tokens.css only,
+/* Section pages: Classes & schedule, Today, and the form sheets. Colors come from tokens.css only,
    so light and dark both work. A class's color is passed in as --c (one of --s1 … --s8). */
 
 .count { font: 500 12px/1 var(--f-mono); color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; }
@@ -51,10 +51,6 @@
 .past summary { cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 600; padding: 4px 0; }
 .past .off-list { margin-top: 10px; }
 
-/* Today */
-.today-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.today-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 10px 12px; border-radius: 8px; border-left: 4px solid var(--c); background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
-.today-list .mono { font-size: 13px; color: var(--muted); min-width: 10.5em; }
 
 /* Form sheets */
 dialog.form-sheet { width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: auto; overscroll-behavior: contain; }
@@ -116,4 +112,69 @@ textarea.field-in { resize: vertical; min-height: 4.5em; line-height: 1.45; }
   /* Tapping the field opens the picker; the clock icon only takes room from the time. */
   .times input::-webkit-calendar-picker-indicator { display: none; }
   .times .field-in { padding-inline: 6px; }
+}
+
+/* Today */
+/* The page is redrawn inside [data-paint], so it carries the page's spacing. */
+.today [data-paint] { display: grid; gap: 20px; min-width: 0; }
+.today .view-head .lede { color: var(--ink); }
+.day-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.day-nav .icon-btn { font-size: 20px; line-height: 1; }
+.day-label { margin: 0; display: flex; align-items: center; gap: 8px; min-width: 9.5em; justify-content: center; }
+.day-label b { font-size: 14px; font-weight: 600; }
+.badge.other { background: var(--accent-soft); color: var(--accent); }
+.badge.next { background: var(--accent-soft); color: var(--accent); }
+.day-nav.is-other .day-label b { color: var(--accent); }
+.day-jump { margin-left: auto; }
+.day-jump .field-in { font-family: var(--f-mono); font-size: 13px; padding: 7px 8px; }
+.today-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.today-main, .today-side { display: grid; gap: 20px; min-width: 0; }
+.muted { color: var(--muted); }
+
+.slots { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.slot { display: grid; grid-template-columns: 6.2em minmax(0, 1fr); gap: 14px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); border-left: 4px solid var(--c); background: color-mix(in srgb, var(--c) 7%, var(--surface)); }
+.slot.is-now { border-color: var(--c); box-shadow: 0 0 0 1px var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface)); }
+.slot.is-done { opacity: .62; }
+.slot-time { display: grid; align-content: start; gap: 2px; font-size: 13px; }
+.slot-time span + span { color: var(--muted); font-size: 12px; }
+.slot-main { display: grid; gap: 4px; min-width: 0; }
+.slot-main h3 { margin: 0; font: 700 16px/1.25 var(--f-display); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+.slot-meta { margin: 0; color: var(--muted); font-size: 13.5px; }
+.slot-lesson { margin: 0; font-size: 13.5px; overflow-wrap: anywhere; }
+.slot-lesson.none { color: var(--faint); }
+.slot-notes { margin: 0; color: var(--muted); font-size: 13px; white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.status { display: inline-block; font: 600 11px/1 var(--f-body); border-radius: 999px; padding: 3px 7px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); vertical-align: 1px; }
+.status.s-ready { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+.status.s-taught { background: var(--good-soft); border-color: transparent; color: var(--good); }
+.status.s-high, .status.s-late { background: var(--crit-soft); border-color: transparent; color: var(--crit); }
+
+.off-banner { display: grid; gap: 2px; padding: 12px 14px; border-radius: 10px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); }
+.off-banner b { color: var(--warn); }
+.off-banner span { font-size: 13px; color: var(--ink); }
+.next-class { margin: 12px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; color: var(--muted); font-size: 14px; }
+.next-class b { color: var(--ink); }
+.other-lessons h3, .att-group h3 { margin: 0 0 8px; font-size: 13.5px; display: flex; align-items: center; gap: 8px; }
+.other-lessons ul, .att-group ul, .up-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 14px; }
+.att-group li, .other-lessons li { overflow-wrap: anywhere; }
+.att-group.crit h3 { color: var(--crit); }
+.more { color: var(--muted); font-size: 13px; }
+.up-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; overflow-wrap: anywhere; }
+.up-list .when { font-size: 12.5px; color: var(--muted); min-width: 7.2em; }
+.kind { font: 600 11px/1 var(--f-body); border-radius: 4px; padding: 3px 6px; background: var(--surface-2); color: var(--muted); }
+.kind.k-off { background: var(--warn-soft); color: var(--warn); }
+.kind.k-grade { background: var(--accent-soft); color: var(--accent); }
+.quick-btns { display: grid; gap: 8px; }
+.quick-btns .btn { justify-content: flex-start; }
+
+@media (max-width: 1099px) { .today-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 899px) {
+  .today [data-paint] { gap: 16px; }
+  .today-side { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+}
+@media (max-width: 480px) {
+  .day-label { flex: 1; min-width: 0; }
+  .day-jump { margin-left: 0; width: 100%; }
+  .day-jump .field-in { width: 100%; }
+  .day-nav .btn[data-day="today"] { order: 5; flex: 1; }
+  .slot { grid-template-columns: 5.4em minmax(0, 1fr); gap: 10px; padding: 10px 12px; }
 }
