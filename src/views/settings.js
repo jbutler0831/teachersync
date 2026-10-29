@@ -97,7 +97,7 @@ function paintData(el) {
       <div class="panel-head"><h2>Your data</h2></div>
       <div class="panel-body stack">
         <p class="note">Everything is saved on this device only: <strong>${esc(describeCounts(counts))}</strong>. Nothing is sent anywhere, and TeacherSync never asks for student names or grades.</p>
-        <p class="note">Last backup: ${last ? esc(fmtWhen(last)) : 'never'}. Export a backup now and then, and before clearing your browser or switching devices.</p>
+        <p class="note">Last backup exported: ${last ? esc(fmtWhen(last)) : 'never'}. Export a backup now and then, and before clearing your browser or switching devices.</p>
         <div class="row-btns">
           <button class="btn primary" type="button" data-act="export">Export backup</button>
           <button class="btn" type="button" data-act="import"${store.isReadOnly() ? ' disabled' : ''}>Restore from a file…</button>
@@ -118,9 +118,11 @@ function paintData(el) {
 
 function exportBackup() {
   const now = Date.now();
-  downloadText(backupFileName(now), backupText(store.exportData(), now));
+  // When changes are off, this is the saved data exactly as stored (see store.backupData), so nothing is dropped.
+  downloadText(backupFileName(now), backupText(store.backupData(), now));
   store.updateSettings({ lastExportAt: now });
-  toast('Backup saved to your downloads');
+  // The page can't tell whether the file was saved or the save was cancelled, so it doesn't claim either.
+  toast(store.isReadOnly() ? 'Exported your saved data exactly as it is' : 'Backup file exported');
 }
 
 async function importBackup() {

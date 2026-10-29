@@ -21,7 +21,7 @@ describe('Settings → Your data', () => {
     open();
     const text = document.getElementById('dataPanels').textContent;
     expect(text).toContain('1 class and 1 lesson plan');
-    expect(text).toContain('Last backup: never');
+    expect(text).toContain('Last backup exported: never');
     expect(document.getElementById('dataNotice').textContent).toBe('');
   });
 
@@ -37,7 +37,7 @@ describe('Settings → Your data', () => {
     expect(clicks[0]).toMatch(/^TeacherSync-backup-\d{4}-\d{2}-\d{2}\.json$/);
     expect(blob.type).toBe('application/json');
     expect(store.settings().lastExportAt).toBeGreaterThan(0);
-    expect(document.getElementById('dataPanels').textContent).not.toContain('Last backup: never');
+    expect(document.getElementById('dataPanels').textContent).not.toContain('Last backup exported: never');
     return blob.text().then(t => {
       const b = JSON.parse(t);
       expect(b.app).toBe('TeacherSync');
@@ -96,5 +96,28 @@ describe('Settings → Your data', () => {
     document.querySelector('[data-week-start="0"]').click();
     expect(store.settings().weekStartsOn).toBe(0);
     expect(document.querySelector('[data-week-start="0"]').getAttribute('aria-pressed')).toBe('true');
+  });
+});
+
+describe('Settings → Export backup when changes are off', () => {
+  beforeEach(() => { resetDom(); fakeSystemTheme(false); initTheme(); });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('exports the newer version’s data as stored and says so', async () => {
+    localStorage.setItem('tsync-meta', JSON.stringify({ app: 'TeacherSync', schema: 4 }));
+    localStorage.setItem('tsync-tasks', JSON.stringify([{ id: 't1', title: 'x', newField: 1, createdAt: 1, updatedAt: 1 }]));
+    store.load();
+    let blob;
+    URL.createObjectURL = vi.fn(b => { blob = b; return 'blob:x'; });
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const shell = mountShell(document.getElementById('app'));
+    location.hash = '#/settings';
+    const stop = startRouter((route, opts) => shell.show(route, opts));
+    document.querySelector('[data-act="export"]').click();
+    expect(document.getElementById('toast').textContent).toBe('Exported your saved data exactly as it is');
+    const b = JSON.parse(await blob.text());
+    expect([b.schema, b.data.tasks[0].newField]).toEqual([4, 1]);
+    stop();
   });
 });

@@ -45,6 +45,17 @@
       "buildResources": "desktop",
       "output": "release"
     },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false,
+      "enableCookieEncryption": false,
+      "enableEmbeddedAsarIntegrityValidation": false,
+      "loadBrowserProcessSpecificV8Snapshot": false,
+      "resetAdHocDarwinSignature": true
+    },
     "mac": {
       "category": "public.app-category.education",
       "icon": "desktop/icon.png",

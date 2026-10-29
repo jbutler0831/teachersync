@@ -9,6 +9,11 @@ const path = require('node:path');
 const { SCHEME, ORIGIN, fileFor, contentType, csp, isAppUrl, isExternal } = require('./lib.cjs');
 
 const ROOT = path.join(__dirname, '..', 'dist');
+// Chromium writes saved data (localStorage) to disk a few seconds after each change, and a normal quit writes the
+// rest. A crash or forced restart in between would lose those last seconds, so pending data is written out every
+// second, and whenever the window loses focus or is hidden.
+const FLUSH_MS = 1000;
+const flush = () => { try { session.defaultSession.flushStorageData(); } catch (_) {} };
 protocol.registerSchemesAsPrivileged([{ scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
 let win = null;
@@ -23,6 +28,7 @@ function createWindow() {
   });
   win.once('ready-to-show', () => win.show());
   win.on('closed', () => { win = null; });
+  for (const event of ['blur', 'hide', 'minimize']) win.on(event, flush);
   // No pop-up windows; web links go to the browser.
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (isExternal(url)) shell.openExternal(url);
@@ -75,7 +81,9 @@ if (!app.requestSingleInstanceLock()) {
       item.setSaveDialogOptions({ defaultPath: path.join(app.getPath('downloads'), item.getFilename()) });
     });
     createWindow();
+    setInterval(flush, FLUSH_MS);
     app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) createWindow(); });
   });
+  app.on('before-quit', flush);
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 }

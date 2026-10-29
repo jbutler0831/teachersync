@@ -6,7 +6,7 @@
 // - Changes are checked first and saved before they appear. If saving fails (storage full or blocked),
 //   nothing changes and the result says why.
 // - Safety copies (`tsync-snapshots`) are taken before anything that replaces or removes a lot.
-import { lsGet, lsSet, lsRemove } from '../lib/storage.js';
+import { lsGet, lsSet, lsRemove, lsKeys } from '../lib/storage.js';
 import { COLLECTIONS, TYPES, SCHEMA_VERSION, cleanRecord, cleanSettings, defaultSettings, upgrade, orphansOf } from './schema.js';
 import { isPlainObject, makeId } from './fields.js';
 import { makeBackup, readBackup, mergeData, countsOf, totalOf } from './backup.js';
@@ -34,12 +34,13 @@ const emptyData = () => ({ ...Object.fromEntries(COLLECTIONS.map(c => [c, []])),
 const fail = (msg, errors = {}) => ({ ok: false, errors: { ...errors, ...(msg ? { _: msg } : {}) } });
 
 /**
- * storage: { get(key), set(key, text) → true/false, remove(key) }, with keys already without the `tsync-` prefix.
+ * storage: { get(key), set(key, text) → true/false, remove(key), keys() → [key] }, with keys already without the `tsync-` prefix.
  * now and newId can be replaced in tests.
  */
-export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemove }, now = () => Date.now(), newId = makeId } = {}) {
+export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemove, keys: lsKeys }, now = () => Date.now(), newId = makeId } = {}) {
   let data = emptyData();
   let readOnly = false;
+  let savedVersion = SCHEMA_VERSION; // the version that saved the data on this device
   let report = { problems: [], skipped: 0, migratedFrom: null, orphans: 0 };
   let metaSaved = false;
   const listeners = new Set();
@@ -66,6 +67,7 @@ export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemo
       if (metaOk) version = m.schema;
       else problems.push('Some app information was damaged and has been reset. Your classes and plans weren’t affected.');
     }
+    savedVersion = version;
     if (version > SCHEMA_VERSION) { readOnly = true; problems.push(MESSAGES.newer); }
     metaSaved = metaOk && version === SCHEMA_VERSION;
 
@@ -286,6 +288,29 @@ export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemo
   /* ---------- Whole data: backups, restore, safety copies ---------- */
 
   const exportData = () => ({ ...Object.fromEntries(COLLECTIONS.map(c => [c, data[c]])), settings: data.settings });
+
+  /**
+   * What Export backup writes: { data, schema, unreadable }. Normally this version's cleaned data.
+   * When changes are off (data saved by a newer TeacherSync, or damage that couldn't be set aside), it's the saved
+   * data exactly as stored, in the version that saved it, so nothing this version doesn't understand is dropped:
+   * every TeacherSync key is included (except safety copies), and text that can't be read goes in `unreadable`.
+   * Only reads; never writes.
+   */
+  function backupData() {
+    if (!readOnly) return { data: exportData(), schema: SCHEMA_VERSION };
+    const out = {}, unreadable = {};
+    const known = Object.fromEntries([...COLLECTIONS, 'settings'].map(c => [KEYS[c], c]));
+    const keys = typeof storage.keys === 'function' ? storage.keys() : Object.values(KEYS);
+    for (const key of keys) {
+      if (key === KEYS.snapshots || key === KEYS.meta) continue;
+      const text = storage.get(key);
+      if (text === null) continue;
+      const p = parse(text);
+      if (p.error || (known[key] && known[key] !== 'settings' && !Array.isArray(p.value))) unreadable[key] = text;
+      else out[known[key] || key] = p.value;
+    }
+    return { data: out, schema: Math.max(savedVersion, SCHEMA_VERSION), unreadable };
+  }
   const isEmpty = () => COLLECTIONS.every(c => !data[c].length);
 
   function readSnapshots() {
@@ -299,10 +324,11 @@ export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemo
     if (isEmpty()) return 'empty';
     const entry = { id: newId(), at: now(), reason: String(reason).slice(0, 120), backup: makeBackup(exportData(), now()) };
     let list = [...readSnapshots(), entry].slice(-MAX_SNAPSHOTS);
-    // Drop the oldest copies until everything fits.
+    // Drop the oldest copies until everything fits. The newest copy alone is kept even when it's over the limit
+    // (large data), as long as the device has room; otherwise a restore could never go ahead.
     while (list.length) {
       const text = JSON.stringify(list);
-      if (text.length <= SNAPSHOT_CHARS && storage.set(KEYS.snapshots, text)) return entry.id;
+      if ((text.length <= SNAPSHOT_CHARS || list.length === 1) && storage.set(KEYS.snapshots, text)) return entry.id;
       if (list.length === 1) break;
       list = list.slice(1);
     }
@@ -316,6 +342,7 @@ export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemo
    * mode 'replace': everything (including settings) becomes the backup's.
    * mode 'merge': adds what's missing; where both have the same item, the more recently changed one is kept.
    * Either way, when this device last exported a backup stays as it is.
+   * A restore that would go over a limit (for example 10,000 lesson plans) is refused, not trimmed.
    * A safety copy of what was here is saved first.
    */
   function restore(raw, mode, reason = 'Before restoring a backup') {
@@ -324,10 +351,14 @@ export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemo
     const checked = readBackup(makeBackup(isPlainObject(raw) ? raw : {}, now()));
     if (!checked.ok) return fail(checked.error);
     const incoming = checked.data;
-    if (!snapshot(reason)) return fail(MESSAGES.noSafetyCopy);
     const { data: next, summary } = mode === 'replace'
       ? { data: incoming, summary: { added: totalOf(countsOf(incoming)), updated: 0, unchanged: 0 } }
       : mergeData(exportData(), incoming);
+    const over = COLLECTIONS.filter(c => next[c].length > TYPES[c].max);
+    if (over.length) {
+      return fail(`Nothing was restored: this would make ${over.map(c => `${next[c].length.toLocaleString('en-US')} ${TYPES[c].plural} (TeacherSync holds up to ${TYPES[c].max.toLocaleString('en-US')})`).join(' and ')}.`);
+    }
+    if (!snapshot(reason)) return fail(MESSAGES.noSafetyCopy);
     const changes = {};
     for (const c of COLLECTIONS) changes[c] = next[c].map(freeze);
     changes.settings = mode === 'replace' ? freezeSettings({ ...next.settings, lastExportAt: data.settings.lastExportAt }) : data.settings;
@@ -351,7 +382,7 @@ export function createStore({ storage = { get: lsGet, set: lsSet, remove: lsRemo
   return {
     load, all, get, create, update, remove, restoreRemoved,
     settings: () => data.settings, updateSettings,
-    exportData, snapshot, snapshots, restore, restoreSnapshot, damagedCopies,
+    exportData, backupData, snapshot, snapshots, restore, restoreSnapshot, damagedCopies,
     report: () => report, isReadOnly: () => readOnly,
     subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
   };

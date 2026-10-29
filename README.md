@@ -1,8 +1,19 @@
 # TeacherSync
 
-Plan classes, lessons, assignments, grading and daily tasks in one place. A web app that installs on phones and computers (a PWA) and works offline. Everything is saved on the device; there are no accounts, no student records and no AI features in version 1.
+Plan classes, lessons, assignments, grading and daily tasks in one place. A desktop app for Mac and Windows, and a web app that installs on phones and computers (a PWA) and works offline. Everything is saved on the device; there are no accounts, no student records and no AI features in version 1.
 
-**Status:** Phases 1–8 of the MVP: the app shell, navigation, themes and offline install; the data layer (classes, days off, lesson plans, assignments, tasks, settings) with backup and restore in Settings; Classes & schedule (classes, weekly meeting times, days off, a dated week); the Today dashboard; Lesson plans; Assignments & grading; Tasks with Quick Add; and the Week view with calendar export. Every section is in place.
+**Status:** Phases 1–8 of the MVP: the app shell, navigation, themes and offline install; the data layer (classes, days off, lesson plans, assignments, tasks, settings) with backup and restore in Settings; Classes & schedule (classes, weekly meeting times, days off, a dated week); the Today dashboard; Lesson plans; Assignments & grading; Tasks with Quick Add; and the Week view with calendar export. Every section is in place. Version 0.1.0 is released on GitHub with Mac and Windows installers; Phase 9 (cleanup and testing) fixed backup safety issues and desktop crash safety.
+
+## What's been tested where
+
+| Platform | Tested | How |
+|---|---|---|
+| Web app in Chrome (Mac) | Yes | Automated: 358 unit and screen tests (jsdom), plus scripted checks of every section in headless Chrome at 320, 390, 768 and 1280px, light and dark, with very long text |
+| Mac desktop app, Apple Silicon | Yes | Launched and checked (every section, no errors, data kept after quitting and reopening, crash safety); installed and used on the developer's Mac |
+| Mac desktop app, Intel | Partly | Launched and checked on Apple Silicon through Rosetta; not yet on an Intel Mac |
+| Windows desktop app | **No** | The installer was built and inspected on a Mac only. It has not been installed or run on a Windows PC |
+| Safari, Firefox, Android Chrome, iPhone, iPad | **No** | Not tested by hand yet |
+| Importing the `.ics` file into Apple Calendar, Google Calendar or Outlook | **No** | The file is checked against the iCalendar format rules, but hasn't been imported into a real calendar yet |
 
 ## Run it
 
@@ -61,8 +72,10 @@ Everything is saved in this browser's `localStorage`. Nothing is sent anywhere, 
 **Rules the store keeps:**
 - Every change is checked, then saved, and only then shown. If saving fails (storage full or blocked), nothing changes and the result says why. A change to several collections is all or nothing.
 - Loading cleans every record. One damaged collection doesn't affect the others; unusable items are set aside, and their original text is kept in `tsync-damaged` (downloadable from Settings). Data from an older version is upgraded. Data from a newer version is shown but never written over.
-- A safety copy of everything is saved before a restore, or before removing a class together with its lessons and assignments. The last 10 are kept, and Settings can go back to any of them.
-- Backups (`TeacherSync-backup-YYYY-MM-DD.json`) contain every record and setting. Restoring a backup either replaces everything or adds what's missing (where both copies have the same item, the newer change wins). Only TeacherSync's own collections are read from a file; anything else in it is ignored, and SemesterSync backups are recognized and refused.
+- A safety copy of everything is saved before a restore, or before removing a class together with its lessons and assignments. The last 10 are kept (within 1.5 MB together; the newest copy is kept even when it's larger on its own, if the device has room), and Settings can go back to any of them. If no safety copy can be saved, nothing is changed.
+- Backups (`TeacherSync-backup-YYYY-MM-DD.json`) contain every record and setting. Restoring a backup either replaces everything or adds what's missing (where both copies have the same item, the newer change wins). Only TeacherSync's own collections are read from a file; anything else in it is ignored, and SemesterSync backups are recognized and refused. A restore that would go over a limit (for example 60 classes or 10,000 lesson plans) is refused before anything changes; nothing is trimmed.
+- **Exports never drop data.** When changes are off (data saved by a newer TeacherSync, or damaged data that couldn't be set aside), Export backup writes the saved data exactly as stored, labelled with the version that saved it, including fields and record types this version doesn't know and, as plain text, anything it can't read. Such a file restores in the version that made the data. Exporting never writes anything.
+- Settings shows when a backup was last *exported*: the page can't tell whether the file was then saved or the save was cancelled.
 
 To change what's stored: edit the rules in `schema.js`, bump `SCHEMA_VERSION`, and add a step to `MIGRATIONS` that upgrades the previous version's data.
 
@@ -154,10 +167,14 @@ Each event has a stable `UID` (for example `due-<assignment id>@teachersync.app`
 
 ## Known issues
 
-- **Exporting data from a newer version loses that version's new fields.** If this copy opens data saved by a newer TeacherSync (it's then read-only), Export backup writes what this version understands, so fields only the newer version knows are left out of the file. The data on the device is unaffected, and restore is blocked in that state. Fix later by exporting the newer data unchanged; deliberately left alone for now (no risky changes to backups).
-- **Restore doesn't enforce the per-type limits** (for example 60 classes); only device storage limits it, and a restore that doesn't fit changes nothing.
+Fixed in Phase 9 (and tested): exporting data from a newer version dropped that version's fields and mislabelled the file; restore didn't enforce the per-type limits; large data could make safety copies, and so restores, impossible; the desktop app could lose the last few seconds of changes in a crash; a very long class name could widen Today on a phone on days without classes.
+
+- **The v0.1.0 installers on GitHub don't have the Phase 9 fixes.** They were built before them; a new release (with a new version number) is needed to ship them.
+
+- **The web app can lose the last few seconds of changes if the browser crashes** or the computer loses power. Browsers write saved data to disk a few seconds after each change (a normal close always saves). The desktop app writes it every second, so a crash there loses at most about a second.
 - **Weekly schedules only.** A/B and rotating days aren't implemented (planned as a new `settings.schedule.kind`).
 - **The Windows installer hasn't been run on Windows** (it was built and inspected on a Mac only). The Mac builds were launched and checked on Apple Silicon, the Intel one through Rosetta, not on an Intel Mac.
+- **Desktop hardening still open:** the app's package isn't checked for tampering at startup (asar integrity validation is off: it can't be verified on Windows yet, and with ad-hoc signing anyone able to change the file could re-sign it). Someone already on the computer can still start the app with Chromium's `--remote-debugging-port` and read its page data. Both are worth revisiting with real code signing.
 - **Not yet tested on real devices or other browsers.** Automated checks run in jsdom and headless Chrome only (layout checks compare the page with the device width at 320, 390, 768 and 1280px, including very long words and pasted links); Safari (iPhone, iPad, Mac), Firefox and Android Chrome still need testing by hand, including installing the app and the date and time pickers.
 
 ## Desktop app (Mac and Windows)
@@ -172,7 +189,9 @@ npm run dist:win    # Windows installer (64-bit, NSIS), built on a Mac without W
 
 Installers are written to `release/` (not committed). **If the project is in an iCloud-synced folder** (Desktop or Documents), macOS can't sign the app there; build to a local folder instead, for example `npx electron-builder --mac -c.directories.output="$HOME/Library/Caches/TeacherSync-build"`.
 
-- **Data** is saved per computer: `~/Library/Application Support/TeacherSync` on a Mac, `%APPDATA%\TeacherSync` on Windows. It's separate from the web app's; use Settings → Export backup and Restore to move it.
+- **Data** is saved per computer: `~/Library/Application Support/TeacherSync` on a Mac, `%APPDATA%\TeacherSync` on Windows. It's separate from the web app's; use Settings → Export backup and Restore to move it. It's written to disk every second and on quitting, so quitting and reopening keeps everything, and a crash or forced restart loses at most about a second of changes.
+- **Testing a build without touching real data:** start the app with its own data folder, for example `TeacherSync.app/Contents/MacOS/TeacherSync --user-data-dir=/tmp/teachersync-test`.
+- **Electron fuses** (`build.electronFuses` in `package.json`) switch off what the app doesn't need: running the program as Node.js (`ELECTRON_RUN_AS_NODE`), `NODE_OPTIONS`, the `--inspect` debugger, loading app code from outside `app.asar`, and extra powers for `file://` pages. Cookie encryption stays off (no cookies are used) and asar integrity validation stays off (not yet verifiable on Windows). Checked on the Mac builds: the blocked options are refused, and the app, its data and backups work as before.
 - **Signing:** the Mac apps are ad-hoc signed, not notarized, so a downloaded copy opens the first time with right-click → Open (or System Settings → Privacy & Security → Open Anyway). The Windows installer is unsigned, so SmartScreen asks first (More info → Run anyway). Removing these prompts needs an Apple Developer ID and a Windows code-signing certificate.
 - On an Apple Silicon Mac, the Intel build runs through Rosetta; its first launch takes noticeably longer while Rosetta translates it.
 

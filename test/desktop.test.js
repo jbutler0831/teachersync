@@ -74,6 +74,14 @@ describe('security', () => {
     expect(main).not.toMatch(/preload|enableRemoteModule|webSecurity: false|toggleDevTools/);
     expect(main).toContain("process.platform === 'darwin' ? { role: 'appMenu' } : { role: 'fileMenu' }"); // Quit on Windows too
   });
+
+  it('saved data is written to disk every second, not just a few seconds later (crash safety)', () => {
+    const main = readFileSync(new URL('../desktop/main.cjs', import.meta.url), 'utf8');
+    expect(main).toMatch(/const FLUSH_MS = 1000;/);
+    expect(main).toMatch(/session\.defaultSession\.flushStorageData\(\)/);
+    expect(main).toMatch(/setInterval\(flush, FLUSH_MS\)/);
+    expect(main).toMatch(/\['blur', 'hide', 'minimize'\]/);
+  });
 });
 
 describe('packaging', () => {
@@ -89,6 +97,20 @@ describe('packaging', () => {
     expect(pkg.build.directories.output).toBe('release');
     const icon = readFileSync(new URL('../desktop/icon.png', import.meta.url));
     expect([icon.readUInt32BE(16), icon.readUInt32BE(20)]).toEqual([1024, 1024]);
+  });
+
+  it('turns off the Electron fuses TeacherSync doesn’t need (security), and keeps the ones it can’t verify off', () => {
+    expect(pkg.build.electronFuses).toEqual({
+      runAsNode: false,                             // ELECTRON_RUN_AS_NODE can't turn the app into a Node.js engine
+      enableNodeOptionsEnvironmentVariable: false,  // NODE_OPTIONS can't inject code
+      enableNodeCliInspectArguments: false,         // --inspect can't attach a debugger to the main process
+      onlyLoadAppFromAsar: true,                    // app code only from app.asar
+      grantFileProtocolExtraPrivileges: false,      // the app never uses file://
+      enableCookieEncryption: false,                // no cookies are used
+      enableEmbeddedAsarIntegrityValidation: false, // can't be verified on Windows yet
+      loadBrowserProcessSpecificV8Snapshot: false,
+      resetAdHocDarwinSignature: true,              // so unsigned Apple Silicon builds still launch
+    });
   });
 
   it('ships no runtime dependencies (Vite bundles everything into dist/), and versions are exact', () => {

@@ -189,3 +189,112 @@ describe('reading backup files', () => {
     expect(r.data.settings.theme).toBe('dark');
   });
 });
+
+describe('exports never drop data (Phase 9)', () => {
+  const META = v => JSON.stringify({ app: 'TeacherSync', schema: v });
+
+  it('normally: this version’s data, with nothing extra', () => {
+    const { store } = testStore();
+    store.create('tasks', { title: 'Copies' });
+    const b = JSON.parse(backupText(store.backupData()));
+    expect(b.schema).toBe(1);
+    expect(b).not.toHaveProperty('unreadable');
+    expect(Object.keys(b.data)).toEqual(['classes', 'daysOff', 'lessons', 'assignments', 'tasks', 'settings']);
+    expect(b.data.tasks[0].title).toBe('Copies');
+  });
+
+  it('data from a newer version is exported exactly as stored, in that version, extra keys and fields included', () => {
+    const storage = memoryStorage();
+    storage.map.set('meta', META(7));
+    storage.map.set('classes', JSON.stringify([{ id: 'c1', name: 'Bio', meetings: [], createdAt: 1, updatedAt: 1, futureField: { keep: true } }]));
+    storage.map.set('tasks', JSON.stringify([{ id: 't1', title: 'x', futureStatus: 'snoozed', createdAt: 1, updatedAt: 1 }]));
+    storage.map.set('rubrics', JSON.stringify([{ id: 'r1', name: 'A new kind of record' }]));
+    storage.map.set('snapshots', JSON.stringify([{ id: 's', backup: {} }]));
+    storage.map.set('unrelated-but-ours', 'not json');
+    const before = new Map(storage.map);
+    const { store } = testStore(storage);
+    expect(store.isReadOnly()).toBe(true);
+    const b = JSON.parse(backupText(store.backupData()));
+    expect(b.schema).toBe(7);                                             // not mislabelled as this version
+    expect(b.data.classes[0].futureField).toEqual({ keep: true });
+    expect(b.data.tasks[0].futureStatus).toBe('snoozed');
+    expect(b.data.rubrics).toEqual([{ id: 'r1', name: 'A new kind of record' }]);
+    expect(b.unreadable).toEqual({ 'unrelated-but-ours': 'not json' });
+    expect(b.data).not.toHaveProperty('snapshots');
+    expect(storage.map).toEqual(before);                                  // exporting wrote nothing
+    expect(parseBackup(backupText(store.backupData())).error).toMatch(/newer version/); // and it isn't half-restored here
+  });
+
+  it('damaged data that couldn’t be set aside is exported too, as the original text', () => {
+    const storage = memoryStorage();
+    storage.map.set('meta', META(1));
+    storage.map.set('classes', JSON.stringify([{ id: 'c1', name: 'Bio', meetings: [], createdAt: 1, updatedAt: 1 }]));
+    storage.map.set('lessons', '{broken json');
+    storage.failKeys.add('damaged');
+    const { store } = testStore(storage);
+    expect(store.isReadOnly()).toBe(true);
+    const b = JSON.parse(backupText(store.backupData()));
+    expect(b.unreadable).toEqual({ lessons: '{broken json' });
+    expect(b.data.classes[0].name).toBe('Bio');
+    expect(storage.get('lessons')).toBe('{broken json');
+    // Restoring that file elsewhere brings back what can be read.
+    const other = testStore();
+    const parsed = parseBackup(backupText(store.backupData()));
+    expect(parsed.ok).toBe(true);
+    expect(other.store.restore(parsed.data, 'replace').ok).toBe(true);
+    expect(other.store.all('classes')).toHaveLength(1);
+  });
+});
+
+describe('restore limits (Phase 9)', () => {
+  const many = (n, make) => Array.from({ length: n }, (_, i) => make(i));
+
+  it('a backup over a limit is refused before anything changes; nothing is trimmed', () => {
+    const { store, storage } = testStore();
+    store.create('tasks', { title: 'Mine' });
+    const before = new Map(storage.map);
+    const big = { classes: many(61, i => ({ id: `c${i}`, name: `Class ${i}`, meetings: [] })) };
+    const res = store.restore(big, 'replace');
+    expect(res.ok).toBe(false);
+    expect(res.errors._).toBe('Nothing was restored: this would make 61 classes (TeacherSync holds up to 60).');
+    expect(storage.map).toEqual(before);                    // not even a safety copy
+    expect(store.all('tasks').map(t => t.title)).toEqual(['Mine']);
+  });
+
+  it('a merge that would go over a limit is refused too; one that fits goes ahead', () => {
+    const { store } = testStore();
+    for (let i = 0; i < 50; i++) store.create('classes', { name: `Mine ${i}` });
+    expect(store.restore({ classes: many(11, i => ({ id: `n${i}`, name: `New ${i}`, meetings: [] })) }, 'merge').errors._).toMatch(/61 classes/);
+    expect(store.all('classes')).toHaveLength(50);
+    expect(store.restore({ classes: many(10, i => ({ id: `n${i}`, name: `New ${i}`, meetings: [] })) }, 'merge').ok).toBe(true);
+    expect(store.all('classes')).toHaveLength(60);
+  });
+});
+
+describe('safety copies for large data (Phase 9)', () => {
+  it('when one copy alone is over the safety-copy limit, it’s still kept if there’s room, so a restore can go ahead', () => {
+    const { store, storage } = testStore();
+    const c = store.create('classes', { name: 'Bio' }).record;
+    for (let i = 0; i < 400; i++) store.create('lessons', { classId: c.id, title: `Lesson ${i}`, activities: 'x'.repeat(4000) });
+    expect(JSON.stringify(store.exportData()).length).toBeGreaterThan(1_500_000);
+    const res = store.restore({ tasks: [{ title: 'From a backup' }] }, 'replace');
+    expect(res.ok).toBe(true);
+    expect(store.snapshots()).toHaveLength(1);
+    expect(store.snapshots()[0].counts.lessons).toBe(400);
+    expect(storage.get('snapshots').length).toBeGreaterThan(1_500_000);
+    expect(store.restoreSnapshot(store.snapshots()[0].id).ok).toBe(true); // and it brings everything back
+    expect(store.all('lessons')).toHaveLength(400);
+    // Going back saved a copy of what was there (one task); the large copy, now live again, made room for it.
+    expect(store.snapshots().map(x => x.counts.tasks)).toEqual([1]);
+  });
+
+  it('when the device has no room even for that, nothing is changed', () => {
+    const storage = memoryStorage({ quota: 2_200_000 });
+    const { store } = testStore(storage);
+    const c = store.create('classes', { name: 'Bio' }).record;
+    for (let i = 0; i < 400; i++) store.create('lessons', { classId: c.id, title: `Lesson ${i}`, activities: 'x'.repeat(4000) });
+    const res = store.restore({ tasks: [{ title: 'From a backup' }] }, 'replace');
+    expect(res.errors._).toBe(MESSAGES.noSafetyCopy);
+    expect(store.all('lessons')).toHaveLength(400);
+  });
+});

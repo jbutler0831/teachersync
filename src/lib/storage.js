@@ -12,3 +12,7 @@ export function lsSet(key, value) {
 export function lsRemove(key) {
   try { localStorage.removeItem(PREFIX + key); } catch (_) {}
 }
+/** TeacherSync's own keys (without the prefix). Other apps' keys are never listed. */
+export function lsKeys() {
+  try { return Object.keys(localStorage).filter(k => k.startsWith(PREFIX)).map(k => k.slice(PREFIX.length)); } catch (_) { return []; }
+}

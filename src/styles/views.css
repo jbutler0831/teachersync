@@ -153,6 +153,8 @@ textarea.field-in { resize: vertical; min-height: 4.5em; line-height: 1.45; }
 .off-banner span { font-size: 13px; color: var(--ink); }
 .next-class { margin: 12px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; color: var(--muted); font-size: 14px; }
 .next-class b { color: var(--ink); }
+/* A long class name wraps instead of widening the page (flex items don't shrink below their longest word by default). */
+.next-class > * { min-width: 0; overflow-wrap: anywhere; }
 .other-lessons h3, .att-group h3 { margin: 0 0 8px; font-size: 13.5px; display: flex; align-items: center; gap: 8px; }
 .other-lessons ul, .att-group ul, .up-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 14px; }
 .att-group li, .other-lessons li { overflow-wrap: anywhere; }

@@ -17,6 +17,7 @@ export function memoryStorage({ quota = Infinity } = {}) {
       return true;
     },
     remove: k => { map.delete(k); },
+    keys: () => [...map.keys()],
     json: k => JSON.parse(map.get(k)),
   };
   return s;

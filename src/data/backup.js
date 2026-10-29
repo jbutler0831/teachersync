@@ -9,17 +9,27 @@ export const MAX_BACKUP_CHARS = 20_000_000;
 export const countsOf = d => Object.fromEntries(COLLECTIONS.map(c => [c, Array.isArray(d[c]) ? d[c].length : 0]));
 export const totalOf = counts => Object.values(counts).reduce((a, n) => a + n, 0);
 
-export function makeBackup(data, at = Date.now()) {
+/**
+ * A backup file's contents. `schema` is the version the data is in (this version's, unless the store exports data
+ * saved by a newer TeacherSync as it is). `unreadable` holds saved text this version couldn't read, keyed by storage
+ * key, so it isn't lost; restoring never reads it.
+ */
+export function makeBackup(data, at = Date.now(), { schema = SCHEMA_VERSION, unreadable } = {}) {
   return {
     app: 'TeacherSync',
     kind: 'backup',
-    schema: SCHEMA_VERSION,
+    schema,
     exportedAt: new Date(at).toISOString(),
-    data: { ...Object.fromEntries(COLLECTIONS.map(c => [c, data[c]])), settings: data.settings },
+    data: { ...data, ...Object.fromEntries(COLLECTIONS.map(c => [c, data[c]])), settings: data.settings },
+    ...(unreadable && Object.keys(unreadable).length ? { unreadable } : {}),
   };
 }
 
-export const backupText = (data, at = Date.now()) => JSON.stringify(makeBackup(data, at), null, 2);
+/** The text of a backup file. `source` is store.backupData() (or just data, at this version). */
+export function backupText(source, at = Date.now()) {
+  const { data, schema, unreadable } = source && source.data ? source : { data: source };
+  return JSON.stringify(makeBackup(data, at, { schema, unreadable }), null, 2);
+}
 export const backupFileName = (at = Date.now()) => `TeacherSync-backup-${iso(new Date(at))}.json`;
 
 const no = error => ({ ok: false, error });
