@@ -2,17 +2,20 @@
 
 Plan classes, lessons, assignments, grading and daily tasks in one place. A desktop app for Mac and Windows, and a web app that installs on phones and computers (a PWA) and works offline. Everything is saved on the device; there are no accounts, no student records and no AI features in version 1.
 
-**Status:** Phases 1–8 of the MVP: the app shell, navigation, themes and offline install; the data layer (classes, days off, lesson plans, assignments, tasks, settings) with backup and restore in Settings; Classes & schedule (classes, weekly meeting times, days off, a dated week); the Today dashboard; Lesson plans; Assignments & grading; Tasks with Quick Add; and the Week view with calendar export. Every section is in place. Version 0.1.0 is released on GitHub with Mac and Windows installers; Phase 9 (cleanup and testing) fixed backup safety issues and desktop crash safety.
+**Status:** Phases 1–8 of the MVP: the app shell, navigation, themes and offline install; the data layer (classes, days off, lesson plans, assignments, tasks, settings) with backup and restore in Settings; Classes & schedule (classes, weekly meeting times, days off, a dated week); the Today dashboard; Lesson plans; Assignments & grading; Tasks with Quick Add; and the Week view with calendar export. Every section is in place. Version 0.1.0 is released on GitHub with Mac and Windows installers; Phase 9 (cleanup and testing) fixed backup safety issues and desktop crash safety; Phase 10 (testing and polish) fixed accessibility issues (the skip link, text contrast, focus rings) and added Firefox and WebKit testing. Version 0.1.1 is prepared but not yet released.
 
 ## What's been tested where
 
 | Platform | Tested | How |
 |---|---|---|
-| Web app in Chrome (Mac) | Yes | Automated: 358 unit and screen tests (jsdom), plus scripted checks of every section in headless Chrome at 320, 390, 768 and 1280px, light and dark, with very long text |
+| Web app in Chrome 156 (Mac) | Yes | Automated: 365 unit and screen tests (jsdom), plus scripted checks of every section in headless Chrome at 320, 390, 768 and 1280px, light and dark, with very long text; works offline after the first visit |
+| Web app in Firefox 155 (Mac) | Yes | The real Firefox, headless, driven over WebDriver BiDi: every section, creating a class, lesson plan, assignment and task, Week, calendar export, backup export and restore, data after a reload, no sideways scrolling at 320–1280px, no console errors |
+| Web app in WebKit 27.2 (Safari's engine) | Yes | The same checks through Playwright's WebKit, including an iPhone-sized touch profile. **This is Safari's engine, not Safari itself** |
 | Mac desktop app, Apple Silicon | Yes | Launched and checked (every section, no errors, data kept after quitting and reopening, crash safety); installed and used on the developer's Mac |
 | Mac desktop app, Intel | Partly | Launched and checked on Apple Silicon through Rosetta; not yet on an Intel Mac |
-| Windows desktop app | **No** | The installer was built and inspected on a Mac only. It has not been installed or run on a Windows PC |
-| Safari, Firefox, Android Chrome, iPhone, iPad | **No** | Not tested by hand yet |
+| Windows desktop app | **No** | The installer was built and inspected on a Mac only. It has not been installed or run on a Windows PC. Checklist for the first real test: [docs/windows-testing.md](docs/windows-testing.md) |
+| Safari (Mac), iPhone, iPad, Android | **No** | Not tested. Real Safari needs Develop → Allow Remote Automation switched on before it can be driven; phones and tablets need the real devices |
+| Accessibility | Yes, automatically | axe-core (WCAG 2.1 A and AA) on every section and the main dialogs, light and dark, at desktop and phone widths, in Chrome, Firefox and WebKit: no violations. Keyboard: every section can be used with Tab, every stop shows a focus ring, dialogs keep focus and return it. Not yet tried with a screen reader (VoiceOver, NVDA) |
 | Importing the `.ics` file into Apple Calendar, Google Calendar or Outlook | **No** | The file is checked against the iCalendar format rules, but hasn't been imported into a real calendar yet |
 
 ## Run it
@@ -173,9 +176,10 @@ Fixed in Phase 9 (and tested): exporting data from a newer version dropped that 
 
 - **The web app can lose the last few seconds of changes if the browser crashes** or the computer loses power. Browsers write saved data to disk a few seconds after each change (a normal close always saves). The desktop app writes it every second, so a crash there loses at most about a second.
 - **Weekly schedules only.** A/B and rotating days aren't implemented (planned as a new `settings.schedule.kind`).
-- **The Windows installer hasn't been run on Windows** (it was built and inspected on a Mac only). The Mac builds were launched and checked on Apple Silicon, the Intel one through Rosetta, not on an Intel Mac.
+- **The Windows installer hasn't been run on Windows** (it was built and inspected on a Mac only; see the [Windows testing checklist](docs/windows-testing.md)). The Mac builds were launched and checked on Apple Silicon, the Intel one through Rosetta, not on an Intel Mac.
 - **Desktop hardening still open:** the app's package isn't checked for tampering at startup (asar integrity validation is off: it can't be verified on Windows yet, and with ad-hoc signing anyone able to change the file could re-sign it). Someone already on the computer can still start the app with Chromium's `--remote-debugging-port` and read its page data. Both are worth revisiting with real code signing.
-- **Not yet tested on real devices or other browsers.** Automated checks run in jsdom and headless Chrome only (layout checks compare the page with the device width at 320, 390, 768 and 1280px, including very long words and pasted links); Safari (iPhone, iPad, Mac), Firefox and Android Chrome still need testing by hand, including installing the app and the date and time pickers.
+- **Not yet tested in Safari itself, on phones or tablets, or with a screen reader.** Automated checks cover Chrome, Firefox and WebKit (Safari's engine) on a Mac, at 320, 390, 768 and 1280px with very long words and pasted links. Still to do by hand: Safari on Mac, iPhone and iPad (including Add to Home Screen and the date and time pickers), Android Chrome, and VoiceOver or NVDA.
+- **Running the tests from an iCloud-synced folder** (Desktop or Documents) can occasionally fail to start test workers when the disk is busy ("Failed to start forks worker"); the tests themselves pass on a re-run. Keeping the project in a folder that isn't synced avoids it.
 
 ## Desktop app (Mac and Windows)
 
@@ -194,6 +198,10 @@ Installers are written to `release/` (not committed). **If the project is in an 
 - **Electron fuses** (`build.electronFuses` in `package.json`) switch off what the app doesn't need: running the program as Node.js (`ELECTRON_RUN_AS_NODE`), `NODE_OPTIONS`, the `--inspect` debugger, loading app code from outside `app.asar`, and extra powers for `file://` pages. Cookie encryption stays off (no cookies are used) and asar integrity validation stays off (not yet verifiable on Windows). Checked on the Mac builds: the blocked options are refused, and the app, its data and backups work as before.
 - **Signing:** the Mac apps are ad-hoc signed, not notarized, so a downloaded copy opens the first time with right-click → Open (or System Settings → Privacy & Security → Open Anyway). The Windows installer is unsigned, so SmartScreen asks first (More info → Run anyway). Removing these prompts needs an Apple Developer ID and a Windows code-signing certificate.
 - On an Apple Silicon Mac, the Intel build runs through Rosetta; its first launch takes noticeably longer while Rosetta translates it.
+
+## License
+
+TeacherSync is released under the [MIT License](LICENSE). Copyright (c) 2026 Jorel Butler.
 
 ## Relationship to SemesterSync
 

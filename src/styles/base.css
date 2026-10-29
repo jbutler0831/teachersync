@@ -49,7 +49,7 @@ h1:focus { outline: none; }
 .toast-act { border: 0; background: none; color: var(--hl); font-weight: 700; cursor: pointer; padding: 0; }
 
 .btn.danger { color: var(--crit); }
-.btn.primary.danger { background: var(--crit); border-color: var(--crit); color: #fff; }
+.btn.primary.danger { background: var(--crit); border-color: var(--crit); color: var(--accent-ink); } /* white on red (light), dark ink on light red (dark) */
 
 /* Dialogs */
 dialog.sheet { overflow-wrap: break-word; border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(480px, calc(100vw - 32px)); background: var(--surface); color: var(--ink); box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .45); }
@@ -64,7 +64,8 @@ dialog.sheet h2 { font: 700 20px/1.2 var(--f-display); margin: 0; overflow-wrap:
 
 /* Forms */
 .field-in { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 10px; }
-.field-in:focus { outline: none; border-color: var(--accent); }
+/* A clear ring, like buttons. :focus-within also covers a date field's own calendar button, where :focus is off. */
+.field-in:focus, .field-in:focus-within { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
 .field-in.n { width: 72px; font-family: var(--f-mono); text-align: right; }
 .field-error { color: var(--crit); font-size: 13px; margin: 6px 0 0; }
 

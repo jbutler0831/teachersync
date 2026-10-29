@@ -88,7 +88,7 @@ describe('packaging', () => {
   it('builds Mac .dmg files for Intel and Apple Silicon, and a Windows installer, from the web build', () => {
     expect(pkg.main).toBe('desktop/main.cjs');
     expect(existsSync(new URL('../desktop/main.cjs', import.meta.url))).toBe(true);
-    expect(pkg.build.files).toEqual(['dist/**/*', 'desktop/main.cjs', 'desktop/lib.cjs', 'package.json']);
+    expect(pkg.build.files).toEqual(['dist/**/*', 'desktop/main.cjs', 'desktop/lib.cjs', 'package.json', 'LICENSE']); // MIT: the notice ships with the app
     expect(pkg.build.mac.target).toEqual([{ target: 'dmg', arch: ['x64', 'arm64'] }]);
     expect(pkg.build.mac.identity).toBe('-');                       // ad-hoc signed, so a downloaded copy isn't "damaged"
     expect(pkg.build.dmg.artifactName).toBe('TeacherSync-${version}-mac-${arch}.${ext}');

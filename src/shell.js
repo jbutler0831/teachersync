@@ -47,6 +47,13 @@ export function mountShell(root) {
   onThemeChange(paintThemeBtn);
   paintThemeBtn();
 
+  // The skip link moves focus to the page itself. It can't simply follow #main: addresses after # name sections
+  // (#/today), so following it would leave the page for Today.
+  root.querySelector('.skip').addEventListener('click', e => {
+    e.preventDefault();
+    root.querySelector('#main').focus();
+  });
+
   const view = root.querySelector('#view');
   return {
     /** Shows a section. After the first page, focus moves to its heading so screen readers announce it. */

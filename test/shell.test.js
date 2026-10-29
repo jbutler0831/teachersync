@@ -104,3 +104,28 @@ describe('app shell', () => {
     expect(document.getElementById('main')).toBeTruthy();
   });
 });
+
+describe('skip link', () => {
+  let stop;
+  beforeEach(() => {
+    resetDom();
+    fakeSystemTheme(false);
+    initTheme();
+    const shell = mountShell(document.getElementById('app'));
+    location.hash = '#/lessons';
+    stop = startRouter((route, opts) => shell.show(route, opts));
+  });
+  afterEach(() => stop());
+
+  it('moves focus to the content and stays on the same section (it used to jump to Today)', () => {
+    const skip = document.querySelector('a.skip');
+    expect(skip.textContent).toBe('Skip to content');
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+    skip.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(document.getElementById('main'));
+    expect(location.hash).toBe('#/lessons');
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    expect(document.querySelector('#view h1').textContent).toBe('Lesson plans');
+  });
+});

@@ -1,7 +1,7 @@
 {
   "name": "teachersync",
   "productName": "TeacherSync",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Plan classes, lessons, assignments, grading and daily tasks in one place. A desktop app for Mac and Windows, and an installable web app for phones and computers.",
   "author": "Jorel Butler",
   "license": "MIT",
@@ -39,7 +39,8 @@
       "dist/**/*",
       "desktop/main.cjs",
       "desktop/lib.cjs",
-      "package.json"
+      "package.json",
+      "LICENSE"
     ],
     "directories": {
       "buildResources": "desktop",
