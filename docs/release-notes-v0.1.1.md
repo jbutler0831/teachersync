@@ -1,7 +1,3 @@
-# TeacherSync 0.1.1 (draft release notes)
-
-**Draft for review. Not published.**
-
 A safety, reliability and accessibility update to 0.1.0. Your data stays on your own computer; there are no accounts. Install it over 0.1.0: your classes, lesson plans, assignments and tasks are kept (checked on a Mac; Windows uses the same data folder but hasn't been tested yet). As always, exporting a backup first is a good idea.
 
 TeacherSync is now released under the **MIT License** (Copyright (c) 2026 Jorel Butler). The license is included in the repository and inside the apps.
